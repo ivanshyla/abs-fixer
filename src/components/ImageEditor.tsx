@@ -27,7 +27,15 @@ export default function ImageEditor() {
   const [currentTooltip, setCurrentTooltip] = useState(0);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [showCursor, setShowCursor] = useState(false);
-  
+
+  // Upload hint
+  const [showUploadHint, setShowUploadHint] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('abs-fixer-upload-hint-shown');
+    }
+    return true;
+  });
+
   // Enhancement options
   const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(null);
   const [selectedEnhancement, setSelectedEnhancement] = useState<string | null>(null);
@@ -155,15 +163,28 @@ export default function ImageEditor() {
   }, [imageEl, containerW]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('handleImageUpload called');
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
 
+    console.log('File selected:', file.name, file.size, file.type);
     setError(null);
     setResultUrl(null);
+    
+    // Hide upload hint once user uploads a photo
+    if (showUploadHint) {
+      setShowUploadHint(false);
+      localStorage.setItem('abs-fixer-upload-hint-shown', 'true');
+    }
 
     const img = new Image();
     img.onload = () => {
+      console.log('Image loaded successfully:', img.naturalWidth, 'x', img.naturalHeight);
       setImageEl(img);
+      // Don't auto-advance to gender step, stay on upload step to show photo + gender selection
       // Reset mask canvas
       if (maskCanvasRef.current) {
         maskCanvasRef.current.width = img.naturalWidth;
@@ -174,6 +195,10 @@ export default function ImageEditor() {
           ctx.fillRect(0, 0, img.naturalWidth, img.naturalHeight);
         }
       }
+    };
+    img.onerror = () => {
+      console.error('Failed to load image');
+      setError('Failed to load image. Please try a different file.');
     };
     img.src = URL.createObjectURL(file);
   };
@@ -349,62 +374,116 @@ export default function ImageEditor() {
     <div className="space-y-8">
       {/* Upload Section */}
       {currentStep === 'upload' && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8">
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-blue-400 hover:bg-gray-50 transition-colors"
-          >
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 relative">
+          {/* Upload Hint */}
+          {showUploadHint && !imageEl && (
+            <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
+              <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg relative animate-bounce">
+                <div className="text-sm font-medium">👆 Click here to upload your photo!</div>
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
+                  <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-blue-600"></div>
+                </div>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Your Photo</h3>
-            <p className="text-gray-500">Choose a fitness photo to enhance</p>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-        </div>
-      )}
+          )}
 
-      {/* Gender Selection */}
-      {currentStep === 'gender' && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Body Type</h2>
-            <p className="text-gray-500">Choose your body type for optimal enhancement</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            {genderOptions.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => {
-                  setSelectedGender(option.id as 'male' | 'female');
-                  setCurrentStep('enhancement');
-                }}
-                className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-center group"
-              >
-                <div className="text-4xl mb-3">{option.icon}</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{option.label}</h3>
-                <p className="text-sm text-gray-500">{option.description}</p>
-              </button>
-            ))}
-          </div>
+          {!imageEl ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-blue-400 hover:bg-gray-50 transition-colors"
+            >
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Your Photo</h3>
+              <p className="text-gray-500">Choose a fitness photo to enhance</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Photo Preview */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Photo</h3>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <img
+                    src={imageEl.src}
+                    alt="Uploaded photo"
+                    className="w-full h-auto"
+                  />
+                </div>
+                <div className="flex space-x-2 mt-3">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                  >
+                    Change Photo
+                  </button>
+                  {imageEl && (
+                    <button
+                      onClick={() => {
+                        setImageEl(null);
+                        setSelectedGender(null);
+                        setSelectedEnhancement(null);
+                        setCurrentStep('upload');
+                      }}
+                      className="px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    >
+                      Start Over
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Gender Selection */}
+              <div>
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Select Body Type</h3>
+                  <p className="text-gray-500">Choose your body type for optimal enhancement</p>
+                </div>
+                
+                <div className="space-y-4">
+                  {genderOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => {
+                        setSelectedGender(option.id as 'male' | 'female');
+                        setCurrentStep('enhancement');
+                      }}
+                      className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group flex items-center space-x-4"
+                    >
+                      <div className="text-3xl">{option.icon}</div>
+                      <div>
+                        <h4 className="text-base font-semibold text-gray-900">{option.label}</h4>
+                        <p className="text-sm text-gray-500">{option.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Enhancement Type Selection */}
       {currentStep === 'enhancement' && selectedGender && (
         <div className="bg-white rounded-2xl border border-gray-200 p-8">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Enhancement Type</h2>
-            <p className="text-gray-500">Select the type of enhancement you want</p>
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => setCurrentStep('upload')}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Back</span>
+            </button>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Enhancement Type</h2>
+              <p className="text-gray-500">Select the type of enhancement you want</p>
+            </div>
+            <div className="w-16"></div> {/* Spacer for centering */}
           </div>
           
           {/* Core Enhancements */}
@@ -450,14 +529,6 @@ export default function ImageEditor() {
           </div>
 
           
-          <div className="text-center mt-6">
-            <button
-              onClick={() => setCurrentStep('gender')}
-              className="text-blue-600 hover:text-blue-800 underline"
-            >
-              ← Back to body type selection
-            </button>
-          </div>
         </div>
       )}
 
@@ -468,21 +539,32 @@ export default function ImageEditor() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {enhancementOptions[selectedGender!].find(e => e.id === selectedEnhancement)?.category === 'body' 
-                      ? 'Select Full Body Area' 
-                      : 'Select Enhancement Area'}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {selectedGender === 'male' ? '👨' : '👩'} {genderOptions.find(g => g.id === selectedGender)?.label} • 
-                    {enhancementOptions[selectedGender!].find(e => e.id === selectedEnhancement)?.icon} {enhancementOptions[selectedGender!].find(e => e.id === selectedEnhancement)?.label}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    {enhancementOptions[selectedGender!].find(e => e.id === selectedEnhancement)?.category === 'body' 
-                      ? 'Paint over your entire body for transformation'
-                      : 'Paint over the area you want to enhance'}
-                  </p>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => setCurrentStep('enhancement')}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>Back</span>
+                  </button>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {enhancementOptions[selectedGender!].find(e => e.id === selectedEnhancement)?.category === 'body' 
+                        ? 'Select Full Body Area' 
+                        : 'Select Enhancement Area'}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {selectedGender === 'male' ? '👨' : '👩'} {genderOptions.find(g => g.id === selectedGender)?.label} • 
+                      {enhancementOptions[selectedGender!].find(e => e.id === selectedEnhancement)?.icon} {enhancementOptions[selectedGender!].find(e => e.id === selectedEnhancement)?.label}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {enhancementOptions[selectedGender!].find(e => e.id === selectedEnhancement)?.category === 'body' 
+                        ? 'Paint over your entire body for transformation'
+                        : 'Paint over the area you want to enhance'}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <button
@@ -575,16 +657,29 @@ export default function ImageEditor() {
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Settings</h3>
-                <button
-                  onClick={() => {
-                    setShowTooltip(true);
-                    setCurrentTooltip(0);
-                    localStorage.removeItem('abs-fixer-tutorial-completed');
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  Show Tips
-                </button>
+                <div className="flex space-x-4">
+                  <button
+                    onClick={() => {
+                      setShowTooltip(true);
+                      setCurrentTooltip(0);
+                      localStorage.removeItem('abs-fixer-tutorial-completed');
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Show Tips
+                  </button>
+                  {!showUploadHint && (
+                    <button
+                      onClick={() => {
+                        setShowUploadHint(true);
+                        localStorage.removeItem('abs-fixer-upload-hint-shown');
+                      }}
+                      className="text-xs text-gray-600 hover:text-gray-800 underline"
+                    >
+                      Reset Upload Hint
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-6">
