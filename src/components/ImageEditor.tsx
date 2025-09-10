@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Stage, Layer, Image as KonvaImage, Group } from "react-konva";
-import Konva from "konva";
+import { Stage, Layer, Image as KonvaImage } from "react-konva";
+import type Konva from "konva";
 
 export default function ImageEditor() {
   const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
@@ -89,7 +89,7 @@ export default function ImageEditor() {
   const getEnhancementPrompt = () => {
     if (!selectedGender || !selectedEnhancement) return "natural fitness enhancement";
     
-    const prompts = {
+    const prompts: Record<'male' | 'female', Record<string, string>> = {
       male: {
         // Core enhancements
         'six-pack': 'defined six-pack abs, masculine muscle definition, athletic male physique, strong core muscles',
@@ -112,11 +112,11 @@ export default function ImageEditor() {
       }
     };
     
-    return prompts[selectedGender][selectedEnhancement] || "natural fitness enhancement";
+    return (prompts[selectedGender] as Record<string, string>)[selectedEnhancement] || "natural fitness enhancement";
   };
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const stageRef = useRef<any>(null);
+  const stageRef = useRef<Konva.Stage | null>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -283,14 +283,15 @@ export default function ImageEditor() {
   };
 
   // Drawing handlers with smooth cursor
-  const handleMouseDown = (e: any) => {
+  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     setIsDrawing(true);
     handleDraw(e);
   };
 
-  const handleMouseMove = (e: any) => {
+  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     // Update cursor position for custom cursor
     const stage = e.target.getStage();
+    if (!stage) return;
     const pos = stage.getPointerPosition();
     if (pos) {
       setCursorPos({ x: pos.x, y: pos.y });
@@ -313,10 +314,11 @@ export default function ImageEditor() {
     setIsDrawing(false);
   };
 
-  const handleDraw = (e: any) => {
+  const handleDraw = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!maskCanvasRef.current || !imageEl) return;
 
     const stage = e.target.getStage();
+    if (!stage) return;
     const pos = stage.getPointerPosition();
     if (!pos) return;
 
@@ -596,8 +598,8 @@ export default function ImageEditor() {
                   width={imgSize.w}
                   height={imgSize.h}
                   onMouseDown={handleMouseDown}
-                  onMousemove={handleMouseMove}
-                  onMouseup={handleMouseUp}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
                   onMouseEnter={handleMouseEnter}
                   onMouseLeave={handleMouseLeave}
                 >

@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     seed: json.seed !== undefined ? Number(json.seed) : undefined,
   };
 
-  const { prompt, image, mask, strength = 0.1, negative_prompt, num_inference_steps, guidance_scale, seed } = body;
+  const { prompt, image, mask, strength = 0.1 } = body;
 
   if (!prompt) {
     return new Response(

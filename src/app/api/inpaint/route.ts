@@ -145,9 +145,9 @@ export async function POST(req: NextRequest) {
         }
       } else if (first && typeof first === "object") {
         // Handle ReadableStream - read it as text
-        if ('getReader' in (first as any)) {
+        if ('getReader' in (first as ReadableStream)) {
           console.log("Handling ReadableStream...");
-          const reader = (first as any).getReader();
+          const reader = (first as ReadableStream<Uint8Array>).getReader();
           const chunks: Uint8Array[] = [];
           
           while (true) {
