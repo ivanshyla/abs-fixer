@@ -1,76 +1,140 @@
-# ABS Fixer - AI-powered Abs Enhancement
+# ABS Fixer - AI-Powered Fitness Enhancement
 
-Это веб-приложение для улучшения пресса с помощью ИИ. Загрузи фото, нарисуй маску области пресса, и получи улучшенное изображение.
+Transform your physique with AI-powered inpainting technology.
 
-## Возможности
+## Features
 
-- 📸 Загрузка фотографий
-- 🎨 Рисование масок кистью и ластиком
-- 🤖 Генерация через Replicate, Google Gemini, OpenAI DALL-E
-- 👥 Выбор пола (мужской/женский пресс)
-- 🎛️ Настройка интенсивности изменений
-- 📱 Адаптивный дизайн для мобильных устройств
+- 🎨 **Smart Brush Tool** - Paint the area you want to enhance
+- 💪 **Multiple Styles** - Natural Fit, Athletic, or Defined abs
+- 💳 **Secure Payments** - Stripe integration ($5 per generation)
+- ⭐ **User Feedback** - Rate results to help improve the AI
+- 📊 **Database Tracking** - All generations and ratings stored for learning
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Tech Stack
 
-## Настройка API ключей
+- **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
+- **Canvas**: Konva.js for drawing interface
+- **AI**: Fal.ai FLUX LoRA Inpainting
+- **Payment**: Stripe
+- **Database**: Supabase (PostgreSQL)
 
-Для работы приложения нужны API ключи:
+## Setup
 
-### 1. Replicate API
-- Зарегистрируйся на [replicate.com](https://replicate.com)
-- Получи API токен в настройках аккаунта
-- Добавь в `.env.local`:
+### 1. Install Dependencies
+
 ```bash
-REPLICATE_API_TOKEN=твой_токен_здесь
+npm install
 ```
 
-### 2. Google AI API (Gemini)
-- Получи API ключ на [Google AI Studio](https://makersuite.google.com/app/apikey)
-- Добавь в `.env.local`:
-```bash
-GOOGLE_AI_API_KEY=твой_ключ_здесь
+### 2. Set Up Supabase
+
+1. Create a Supabase project at https://supabase.com
+2. Run the schema from `supabase/schema.sql` in your Supabase SQL editor
+3. Copy your project URL and anon key
+
+### 3. Set Up Stripe
+
+1. Create a Stripe account at https://stripe.com
+2. Get your API keys from the Stripe Dashboard
+3. Set up a webhook endpoint pointing to your `/api/stripe-webhook`
+
+### 4. Configure Environment Variables
+
+Create a `.env.local` file:
+
+```env
+# Fal.ai API
+FAL_AI_API_KEY=your_fal_ai_key_here
+
+# Stripe
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### 3. OpenAI API (DALL-E Edit)
-- Зарегистрируйся на [platform.openai.com](https://platform.openai.com)
-- Получи API ключ в настройках аккаунта
-- Добавь в `.env.local`:
-```bash
-OPENAI_API_KEY=твой_ключ_здесь
-```
-
-## Getting Started
-
-First, run the development server:
+### 5. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database Schema
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Tables
 
-## Learn More
+- **users** - User accounts with email and Stripe customer ID
+- **payments** - Payment tracking with Stripe
+- **generations** - Image generations with AI parameters and user ratings
 
-To learn more about Next.js, take a look at the following resources:
+See `supabase/schema.sql` for full schema.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## User Flow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Upload Photo** - User uploads a photo of their torso
+2. **Draw Mask** - User paints the abs area with brush tool
+3. **Choose Style** - Select Natural Fit, Athletic, or Defined
+4. **Enter Email** - Provide email for result delivery
+5. **Pay** - Secure $5 payment via Stripe
+6. **Generate** - AI enhances the photo (15-30 seconds)
+7. **Rate Result** - User rates satisfaction (thumbs up/down)
+8. **Download** - User downloads enhanced photo
 
-## Deploy on Vercel
+## API Routes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `POST /api/create-payment-intent` - Initialize Stripe payment
+- `POST /api/stripe-webhook` - Handle Stripe webhooks
+- `POST /api/fal-inpaint` - Generate enhanced image
+- `POST /api/save-generation` - Save generation to database
+- `POST /api/rate-generation` - Save user rating
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## CLI Tools (Optional)
+
+For testing purposes, you can use CLI tools:
+
+```bash
+# Vertex AI inpainting (requires Google Cloud setup)
+npm run vertex:inpaint -- --input ./photo.jpg --mask ./mask.png --out ./result.png --prompt "natural abs"
+```
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push code to GitHub
+2. Connect repository to Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy
+
+### Environment Variables for Production
+
+Make sure to set all environment variables in your production environment:
+
+- Use production Stripe keys (not test keys)
+- Use production Supabase project
+- Keep `FAL_AI_API_KEY` secure
+
+### Stripe Webhook Setup
+
+After deployment, update your Stripe webhook endpoint to:
+```
+https://yourdomain.com/api/stripe-webhook
+```
+
+## Pricing
+
+- **Per Generation**: $5.00 USD
+- Includes: AI enhancement, unlimited downloads, result stored for 30 days
+
+## Support
+
+For issues or questions, contact: your@email.com
+
+## License
+
+MIT

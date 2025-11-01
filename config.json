@@ -1,0 +1,55 @@
+{
+  "projectName": "ABS Fixer",
+  "version": "1.0.0",
+  "pricing": {
+    "perGeneration": {
+      "amount": 500,
+      "currency": "usd",
+      "display": "$5.00"
+    }
+  },
+  "aiModels": {
+    "primary": {
+      "provider": "fal.ai",
+      "model": "flux-lora/inpainting",
+      "defaultParams": {
+        "num_inference_steps": 28,
+        "guidance_scale": 1.5,
+        "strength": 0.25
+      }
+    }
+  },
+  "absTypes": [
+    {
+      "id": "natural_fit",
+      "label": "Natural Fit",
+      "description": "Subtle, natural definition",
+      "prompt": "subtle natural abdominal definition, realistic athletic physique, minimal enhancement"
+    },
+    {
+      "id": "athletic",
+      "label": "Athletic",
+      "description": "Moderate muscle tone",
+      "prompt": "moderate muscle tone, athletic six-pack abs, natural fitness level"
+    },
+    {
+      "id": "defined",
+      "label": "Defined",
+      "description": "Clear six-pack visible",
+      "prompt": "clear defined six-pack abs, strong muscle definition, fit physique"
+    }
+  ],
+  "features": {
+    "payment": true,
+    "rating": true,
+    "emailDelivery": false,
+    "userAuth": false
+  },
+  "limits": {
+    "maxImageSize": 10485760,
+    "allowedFormats": ["image/jpeg", "image/png", "image/webp"],
+    "maxBrushSize": 80,
+    "minBrushSize": 20
+  }
+}
+

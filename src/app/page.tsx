@@ -23,7 +23,7 @@ export default function Home() {
                        </div>
               <h1 className="text-xl font-semibold text-gray-900">ABS Fixer</h1>
             </div>
-            <div className="text-sm text-gray-500">AI-Powered Fitness Enhancement</div>
+            <div className="text-sm text-gray-500">AI-Powered Enhancement</div>
           </div>
         </div>
       </header>
@@ -32,10 +32,10 @@ export default function Home() {
         <main className="max-w-6xl mx-auto px-6 py-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Transform Your Body with AI
+              Transform Your Photos with AI
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Upload your photo and let our AI enhance your physique with precision and natural results.
+              Upload your photo, paint the area you want to enhance, and let our AI create natural, realistic results.
             </p>
           </div>
 

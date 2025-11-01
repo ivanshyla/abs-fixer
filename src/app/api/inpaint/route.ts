@@ -145,15 +145,15 @@ export async function POST(req: NextRequest) {
         }
       } else if (first && typeof first === "object") {
         // Handle ReadableStream - read it as text
-        if ('getReader' in (first as any)) {
+        if ('getReader' in (first as Record<string, unknown>)) {
           console.log("Handling ReadableStream...");
-          const reader = (first as any).getReader();
+          const reader = (first as { getReader: () => ReadableStreamDefaultReader<Uint8Array> }).getReader();
           const chunks: Uint8Array[] = [];
           
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            chunks.push(value);
+            if (value) chunks.push(value);
           }
           
           const concatenated = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
