@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { supabase } from '@/lib/supabase';
+import { dynamo, TABLE_NAMES } from '@/lib/aws';
+import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { v4 as uuidv4 } from 'uuid';
 
-const PRICE_IN_CENTS = 500; // $5.00 per generation
+const PRICE_IN_CENTS = 100; // $1.00 per generation
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,25 +20,28 @@ export async function POST(req: NextRequest) {
 
     // Create or get user
     let userId: string | null = null;
-    
+
     if (userEmail) {
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id, stripe_customer_id')
-        .eq('email', userEmail)
-        .single();
+      // Check if user exists
+      const getUser = await dynamo.send(new GetCommand({
+        TableName: TABLE_NAMES.USERS,
+        Key: { id: userEmail } // Using email as ID for simplicity in DynamoDB
+      }));
 
-      if (existingUser) {
-        userId = existingUser.id;
+      if (getUser.Item) {
+        userId = getUser.Item.id;
       } else {
-        const { data: newUser, error } = await supabase
-          .from('users')
-          .insert({ email: userEmail })
-          .select()
-          .single();
-
-        if (error) throw error;
-        userId = newUser.id;
+        // Create new user
+        userId = userEmail;
+        await dynamo.send(new PutCommand({
+          TableName: TABLE_NAMES.USERS,
+          Item: {
+            id: userId,
+            email: userEmail,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        }));
       }
     }
 
@@ -56,13 +61,18 @@ export async function POST(req: NextRequest) {
 
     // Save payment record to database
     if (userId) {
-      await supabase.from('payments').insert({
-        user_id: userId,
-        stripe_payment_intent_id: paymentIntent.id,
-        stripe_payment_status: paymentIntent.status,
-        amount: PRICE_IN_CENTS,
-        currency: 'usd',
-      });
+      await dynamo.send(new PutCommand({
+        TableName: TABLE_NAMES.PAYMENTS,
+        Item: {
+          id: uuidv4(),
+          user_id: userId,
+          stripe_payment_intent_id: paymentIntent.id,
+          stripe_payment_status: paymentIntent.status,
+          amount: PRICE_IN_CENTS,
+          currency: 'usd',
+          created_at: new Date().toISOString(),
+        }
+      }));
     }
 
     return NextResponse.json({

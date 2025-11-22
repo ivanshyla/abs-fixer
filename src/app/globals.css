@@ -58,44 +58,7 @@ body {
   background: #2563eb;
 }
 
-.slider::-moz-range-track {
-  background: linear-gradient(to right, #e5e7eb 0%, #d1d5db 100%);
-  height: 10px;
-  border-radius: 5px;
-  border: 1px solid #d1d5db;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.slider::-moz-range-thumb {
-  height: 24px;
-  width: 24px;
-  border-radius: 50%;
-  background: #3b82f6;
-  cursor: pointer;
-  border: 3px solid white;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(59, 130, 246, 0.3);
-  transition: all 0.2s ease;
-}
-
 /* Smooth animations */
 * {
   scroll-behavior: smooth;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
 }

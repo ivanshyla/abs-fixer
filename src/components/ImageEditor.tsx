@@ -1,173 +1,60 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Stage, Layer, Image as KonvaImage } from "react-konva";
+import React, { useRef, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import Image from "next/image";
+import { Elements } from "@stripe/react-stripe-js";
+import dynamic from "next/dynamic";
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Import sub-components
+import UploadStep from "./image-editor/UploadStep";
+import StyleSelector from "./image-editor/StyleSelector";
+import PaymentForm from "./image-editor/PaymentForm";
+import ResultView from "./image-editor/ResultView";
 
-// Abs type options (simplified - no weight)
-const ABS_TYPES = [
-  { id: 'natural_fit', label: 'Natural Fit', description: 'Subtle, natural definition', icon: '💪' },
-  { id: 'athletic', label: 'Athletic', description: 'Moderate muscle tone', icon: '🏃' },
-  { id: 'defined', label: 'Defined', description: 'Clear six-pack visible', icon: '🔥' },
-];
+// Dynamic import for CanvasEditor to avoid SSR issues with Konva
+const CanvasEditor = dynamic(() => import("./image-editor/CanvasEditor"), {
+  ssr: false,
+});
+
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 type Step = 'upload' | 'draw' | 'pay' | 'result';
 
 export default function ImageEditor() {
   const [step, setStep] = useState<Step>('upload');
   const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
-  const [scale, setScale] = useState(1);
-  const [containerW, setContainerW] = useState(800);
-  const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [brushSize, setBrushSize] = useState(40);
-  const [mode, setMode] = useState<"brush" | "erase">("brush");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // User choices
   const [selectedAbsType, setSelectedAbsType] = useState<string>('natural_fit');
   const [userEmail, setUserEmail] = useState<string>('');
-  
+
   // Payment
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
-  
+
   // Result
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const stageRef = useRef(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [maskImage, setMaskImage] = useState<HTMLImageElement | null>(null);
 
-  // Initialize mask canvas
-  useEffect(() => {
-    if (!maskCanvasRef.current) {
-      const canvas = document.createElement("canvas");
-      canvas.width = 1024;
-      canvas.height = 1024;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-      maskCanvasRef.current = canvas;
-    }
-  }, []);
-
-  // Handle resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        setContainerW(containerRef.current.offsetWidth);
-      }
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // Calculate scale
-  useEffect(() => {
-    if (imgSize.w && imgSize.h && containerW) {
-      const targetWidth = Math.min(containerW * 0.9, 600);
-      setScale(targetWidth / imgSize.w);
-    }
-  }, [imgSize, containerW]);
-
-  // File upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  // Handle file upload
+  const handleImageSelect = (file: File) => {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const img = new window.Image();
       img.onload = () => {
         setImageEl(img);
-        setImgSize({ w: img.width, h: img.height });
         setStep('draw');
       };
       img.src = evt.target?.result as string;
     };
     reader.readAsDataURL(file);
-  };
-
-  // Drawing logic
-  const handlePointerDown = (e: unknown) => {
-    if (step !== 'draw') return;
-    setIsDrawing(true);
-    const target = e as { target: { getStage: () => { getPointerPosition: () => { x: number; y: number } | null } } };
-    const stage = target.target.getStage();
-    const pos = stage.getPointerPosition();
-    if (!pos) return;
-
-    const scaleX = imgSize.w / (imgSize.w * scale);
-    const scaleY = imgSize.h / (imgSize.h * scale);
-    const realX = pos.x * scaleX;
-    const realY = pos.y * scaleY;
-
-    drawOnMask(realX, realY);
-  };
-
-  const handlePointerMove = (e: unknown) => {
-    if (!isDrawing || step !== 'draw') return;
-    const target = e as { target: { getStage: () => { getPointerPosition: () => { x: number; y: number } | null } } };
-    const stage = target.target.getStage();
-    const pos = stage.getPointerPosition();
-    if (!pos) return;
-
-    const scaleX = imgSize.w / (imgSize.w * scale);
-    const scaleY = imgSize.h / (imgSize.h * scale);
-    const realX = pos.x * scaleX;
-    const realY = pos.y * scaleY;
-
-    drawOnMask(realX, realY);
-  };
-
-  const handlePointerUp = () => {
-    setIsDrawing(false);
-  };
-
-  const drawOnMask = (x: number, y: number) => {
-    const canvas = maskCanvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const scaleFactor = 1024 / Math.max(imgSize.w, imgSize.h);
-    const scaledX = x * scaleFactor;
-    const scaledY = y * scaleFactor;
-    const scaledBrushSize = brushSize * scaleFactor;
-
-    ctx.globalCompositeOperation = mode === "brush" ? "source-over" : "destination-out";
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(scaledX, scaledY, scaledBrushSize / 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    const maskImg = new window.Image();
-    maskImg.onload = () => setMaskImage(maskImg);
-    maskImg.src = canvas.toDataURL();
-  };
-
-  const clearMask = () => {
-    const canvas = maskCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    setMaskImage(null);
   };
 
   // Payment flow
@@ -217,7 +104,7 @@ export default function ImageEditor() {
       const imageDataURL = imageEl?.src || '';
       const maskDataURL = maskCanvasRef.current?.toDataURL() || '';
 
-      // Call generation API
+      // Call generation API (Restored Fal.ai)
       const response = await fetch('/api/fal-inpaint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -225,7 +112,7 @@ export default function ImageEditor() {
           prompt: getPromptForAbsType(selectedAbsType),
           image: imageDataURL,
           mask: maskDataURL,
-          strength: 0.25,
+          strength: 0.4,
         }),
       });
 
@@ -296,257 +183,276 @@ export default function ImageEditor() {
     return prompts[absType] || prompts.natural_fit;
   };
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      {/* Step: Upload */}
-      {step === 'upload' && (
-        <div className="text-center">
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold mb-2">Upload Your Photo</h3>
-            <p className="text-gray-600">Choose a clear photo showing your torso</p>
-          </div>
+  // Dev bypass
+  const handleDevGenerate = async () => {
+    setLoading(true);
+    setError(null);
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
+    try {
+      // Get image and mask as data URLs
+      const imageDataURL = imageEl?.src || '';
+      const maskDataURL = maskCanvasRef.current?.toDataURL() || '';
 
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-semibold"
-          >
-            Choose Photo
-          </button>
-        </div>
-      )}
+      // Call generation API (Restored Fal.ai)
+      const response = await fetch('/api/fal-inpaint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: getPromptForAbsType(selectedAbsType),
+          image: imageDataURL,
+          mask: maskDataURL,
+          strength: 0.4,
+        }),
+      });
 
-      {/* Step: Draw Mask */}
-      {step === 'draw' && imageEl && (
-        <div>
-          <div className="mb-6">
-            <h3 className="text-2xl font-bold mb-2">Paint Your Abs Area</h3>
-            <p className="text-gray-600">Use the brush to mark the area you want to enhance</p>
-          </div>
+      const data = await response.json();
 
-          {/* Abs Type Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-3">Choose Your Style</label>
-            <div className="grid grid-cols-3 gap-4">
-              {ABS_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setSelectedAbsType(type.id)}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    selectedAbsType === type.id
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-3xl mb-2">{type.icon}</div>
-                  <div className="font-semibold">{type.label}</div>
-                  <div className="text-xs text-gray-500 mt-1">{type.description}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+      if (!response.ok) {
+        throw new Error(data.error || 'Generation failed');
+      }
 
-          {/* Canvas */}
-          <div ref={containerRef} className="bg-gray-100 rounded-lg p-4 mb-4">
-            <Stage
-              ref={stageRef}
-              width={imgSize.w * scale}
-              height={imgSize.h * scale}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-            >
-              <Layer>
-                <KonvaImage image={imageEl} scaleX={scale} scaleY={scale} />
-                {maskImage && (
-                  <KonvaImage
-                    image={maskImage}
-                    scaleX={scale}
-                    scaleY={scale}
-                    opacity={0.5}
-                  />
-                )}
-              </Layer>
-            </Stage>
-          </div>
+      // Save generation to database
+      const saveResponse = await fetch('/api/save-generation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: null,
+          absType: selectedAbsType,
+          outputImageUrl: data.image,
+          modelUsed: data.model_used,
+          promptUsed: getPromptForAbsType(selectedAbsType),
+          strength: 0.4,
+          seed: data.seed,
+          paymentId: 'dev_bypass',
+        }),
+      });
 
-          {/* Controls */}
-          <div className="flex items-center gap-4 mb-6">
-            <button
-              onClick={() => setMode('brush')}
-              className={`px-4 py-2 rounded ${mode === 'brush' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-            >
-              ✏️ Brush
-            </button>
-            <button
-              onClick={() => setMode('erase')}
-              className={`px-4 py-2 rounded ${mode === 'erase' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-            >
-              🧹 Eraser
-            </button>
-            <input
-              type="range"
-              min="20"
-              max="80"
-              value={brushSize}
-              onChange={(e) => setBrushSize(Number(e.target.value))}
-              className="flex-1"
-            />
-            <button onClick={clearMask} className="px-4 py-2 bg-red-500 text-white rounded">
-              Clear
-            </button>
-          </div>
+      const saveData = await saveResponse.json();
 
-          {/* Email Input */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Email Address</label>
-            <input
-              type="email"
-              value={userEmail}
-              onChange={(e) => setUserEmail(e.target.value)}
-              placeholder="your@email.com"
-              className="w-full px-4 py-3 border rounded-lg"
-            />
-            <p className="text-xs text-gray-500 mt-1">We&apos;ll send your result here</p>
-          </div>
+      if (saveResponse.ok) {
+        setGenerationId(saveData.generation.id);
+      }
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 rounded">{error}</div>
-          )}
+      setResultUrl(data.image);
+      setStep('result');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-          {/* Proceed to Payment */}
-          <button
-            onClick={handleProceedToPayment}
-            disabled={loading || !maskImage || !userEmail}
-            className="w-full px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Loading...' : 'Proceed to Payment ($5.00)'}
-          </button>
-        </div>
-      )}
+  // Handle regeneration with new style
+  const handleRegenerate = async (style: string) => {
+    setSelectedAbsType(style);
+    // We need to use the new style immediately, not wait for state update
+    // So we'll create a helper that accepts style override
+    await generateImage(style);
+  };
 
-      {/* Step: Payment */}
-      {step === 'pay' && clientSecret && (
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <PaymentForm
-            onSuccess={handleGenerateAfterPayment}
-            onError={setError}
-            loading={loading}
-          />
-        </Elements>
-      )}
+  // Unified generation helper
+  const generateImage = async (styleOverride?: string) => {
+    setLoading(true);
+    setError(null);
 
-      {/* Step: Result */}
-      {step === 'result' && resultUrl && (
-        <div className="text-center">
-          <h3 className="text-2xl font-bold mb-6">Your Enhanced Photo</h3>
+    const styleToUse = styleOverride || selectedAbsType;
 
-          <div className="mb-6">
-            <Image src={resultUrl} alt="Result" className="mx-auto rounded-lg shadow-lg max-w-full" width={600} height={600} />
-          </div>
+    try {
+      const imageDataURL = imageEl?.src || '';
+      const maskDataURL = maskCanvasRef.current?.toDataURL() || '';
 
-          {/* Rating */}
-          {userRating === null ? (
-            <div className="mb-6">
-              <p className="mb-4 font-semibold">How do you like the result?</p>
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={() => handleRating(1)}
-                  className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                >
-                  👍 Love it!
-                </button>
-                <button
-                  onClick={() => handleRating(-1)}
-                  className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                >
-                  👎 Not satisfied
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="mb-6 p-4 bg-blue-50 text-blue-700 rounded-lg">
-              {userRating === 1 ? '✅ Thanks for your feedback!' : "📝 We'll work on improving!"}
-            </div>
-          )}
+      const response = await fetch('/api/fal-inpaint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: getPromptForAbsType(styleToUse),
+          image: imageDataURL,
+          mask: maskDataURL,
+          strength: 0.4,
+        }),
+      });
 
-          <button
-            onClick={() => {
-              setStep('upload');
-              setImageEl(null);
-              setResultUrl(null);
-              setUserRating(null);
-              clearMask();
-            }}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Create Another
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+      const data = await response.json();
 
-// Payment Form Component
-function PaymentForm({
-  onSuccess,
-  onError,
-  loading,
-}: {
-  onSuccess: () => void;
-  onError: (error: string) => void;
-  loading: boolean;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [processing, setProcessing] = useState(false);
+      if (!response.ok) {
+        throw new Error(data.error || 'Generation failed');
+      }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+      // Save generation
+      const saveResponse = await fetch('/api/save-generation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: null,
+          absType: styleToUse,
+          outputImageUrl: data.image,
+          modelUsed: data.model_used,
+          promptUsed: getPromptForAbsType(styleToUse),
+          strength: 0.4,
+          seed: data.seed,
+          paymentId: paymentIntentId || 'dev_bypass', // Use existing payment ID or dev
+        }),
+      });
 
-    if (!stripe || !elements) return;
+      const saveData = await saveResponse.json();
 
-    setProcessing(true);
+      if (saveResponse.ok) {
+        setGenerationId(saveData.generation.id);
+      }
 
-    const { error } = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required',
-    });
+      setResultUrl(data.image);
+      setStep('result');
+      // Reset rating for new result
+      setUserRating(null);
 
-    if (error) {
-      onError(error.message || 'Payment failed');
-      setProcessing(false);
-    } else {
-      onSuccess();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto">
-      <div className="mb-6">
-        <h3 className="text-2xl font-bold mb-2">Complete Payment</h3>
-        <p className="text-gray-600">Secure payment via Stripe - $5.00</p>
+    <div className="max-w-4xl mx-auto p-4">
+      <h1 className="text-3xl font-bold text-center mb-8">ABS.ai - Body Enhancer</h1>
+
+      {/* Progress Steps (Simple) */}
+      <div className="flex justify-center gap-4 mb-8 text-sm text-gray-500">
+        <span className={step === 'upload' ? 'font-bold text-blue-600' : ''}>1. Upload</span>
+        <span>→</span>
+        <span className={step === 'draw' ? 'font-bold text-blue-600' : ''}>2. Edit</span>
+        <span>→</span>
+        <span className={step === 'pay' ? 'font-bold text-blue-600' : ''}>3. Payment</span>
+        <span>→</span>
+        <span className={step === 'result' ? 'font-bold text-blue-600' : ''}>4. Result</span>
       </div>
 
-      <div className="mb-6">
-        <PaymentElement />
-      </div>
+      {step === 'upload' && (
+        <UploadStep onImageSelect={handleImageSelect} />
+      )}
 
-      <button
-        type="submit"
-        disabled={!stripe || processing || loading}
-        className="w-full px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {processing || loading ? 'Processing...' : 'Pay & Generate ($5.00)'}
-      </button>
-    </form>
+      {step === 'draw' && imageEl && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <CanvasEditor
+              imageEl={imageEl}
+              maskCanvasRef={maskCanvasRef}
+              onMaskChange={setMaskImage}
+              maskImage={maskImage}
+            />
+          </div>
+          <div>
+            <StyleSelector
+              selectedType={selectedAbsType}
+              onSelect={setSelectedAbsType}
+            />
+
+            <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold mb-2">Email Address</label>
+                <input
+                  type="email"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+
+              {error && (
+                <div className="mb-4 p-2 bg-red-50 text-red-600 text-sm rounded">{error}</div>
+              )}
+
+              <button
+                onClick={handleProceedToPayment}
+                disabled={loading || !maskImage || !userEmail}
+                className={`w-full py-3 rounded-lg font-bold transition-all ${maskImage && userEmail
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+              >
+                {loading ? 'Processing...' : 'Proceed to Payment ($1.00)'}
+              </button>
+
+              {/* Step Hint */}
+              {(!maskImage || !userEmail) && (
+                <div className="mt-3 text-xs text-center text-orange-600 bg-orange-50 p-2 rounded border border-orange-100">
+                  {!maskImage ? 'Please paint over your abs first' : 'Please enter your email'}
+                </div>
+              )}
+
+              {/* Dev Bypass Button */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => generateImage()}
+                  className="w-full py-2 bg-gray-800 text-white text-xs rounded hover:bg-gray-700"
+                >
+                  Test Generate (Free / Dev Mode)
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === 'pay' && clientSecret && (
+        <div className="max-w-md mx-auto">
+          {stripePromise ? (
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <PaymentForm
+                onSuccess={() => generateImage()}
+                onError={setError}
+                loading={loading}
+              />
+            </Elements>
+          ) : (
+            <div className="text-red-500">Stripe configuration error</div>
+          )}
+          <button
+            onClick={() => setStep('draw')}
+            className="mt-4 text-gray-500 underline w-full text-center"
+          >
+            Back to Editor
+          </button>
+        </div>
+      )}
+
+      {step === 'result' && resultUrl && (
+        <ResultView
+          resultUrl={resultUrl}
+          userRating={userRating}
+          onRate={handleRating}
+          onRegenerate={handleRegenerate}
+          currentStyle={selectedAbsType}
+          onReset={() => {
+            setStep('upload');
+            setImageEl(null);
+            setResultUrl(null);
+            setUserRating(null);
+            setMaskImage(null);
+            // Clear mask canvas
+            if (maskCanvasRef.current) {
+              const ctx = maskCanvasRef.current.getContext('2d');
+              if (ctx) {
+                ctx.fillStyle = "black";
+                ctx.fillRect(0, 0, maskCanvasRef.current.width, maskCanvasRef.current.height);
+              }
+            }
+          }}
+        />
+      )}
+
+      {loading && step !== 'pay' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg text-center">
+            <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-lg font-bold">Generating...</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

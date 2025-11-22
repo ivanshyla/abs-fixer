@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { dynamo, TABLE_NAMES } from '@/lib/aws';
+import { UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,20 +20,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
-      .from('generations')
-      .update({
-        user_rating: rating,
-        user_feedback: feedback || null,
-        rated_at: new Date().toISOString(),
-      })
-      .eq('id', generationId)
-      .select()
-      .single();
+    // Update item in DynamoDB
+    const result = await dynamo.send(new UpdateCommand({
+      TableName: TABLE_NAMES.GENERATIONS,
+      Key: { id: generationId },
+      UpdateExpression: "set user_rating = :r, user_feedback = :f, rated_at = :t",
+      ExpressionAttributeValues: {
+        ":r": rating,
+        ":f": feedback || null,
+        ":t": new Date().toISOString(),
+      },
+      ReturnValues: "ALL_NEW"
+    }));
 
-    if (error) throw error;
-
-    return NextResponse.json({ success: true, generation: data });
+    return NextResponse.json({ success: true, generation: result.Attributes });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Rate generation error:', message);

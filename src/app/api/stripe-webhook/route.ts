@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { supabase } from '@/lib/supabase';
+import { dynamo, TABLE_NAMES } from '@/lib/aws';
+import { ScanCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,32 +39,37 @@ export async function POST(req: NextRequest) {
     }
 
     // Handle the event
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        
-        // Update payment status in database
-        await supabase
-          .from('payments')
-          .update({ stripe_payment_status: 'succeeded' })
-          .eq('stripe_payment_intent_id', paymentIntent.id);
+    if (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const status = event.type === 'payment_intent.succeeded' ? 'succeeded' : 'failed';
 
-        console.log('Payment succeeded:', paymentIntent.id);
-        break;
+      // Find payment by stripe_payment_intent_id
+      // Note: In production, add a GSI on stripe_payment_intent_id for efficiency
+      const scanResult = await dynamo.send(new ScanCommand({
+        TableName: TABLE_NAMES.PAYMENTS,
+        FilterExpression: "stripe_payment_intent_id = :id",
+        ExpressionAttributeValues: {
+          ":id": paymentIntent.id
+        }
+      }));
 
-      case 'payment_intent.payment_failed':
-        const failedIntent = event.data.object as Stripe.PaymentIntent;
-        
-        await supabase
-          .from('payments')
-          .update({ stripe_payment_status: 'failed' })
-          .eq('stripe_payment_intent_id', failedIntent.id);
+      if (scanResult.Items && scanResult.Items.length > 0) {
+        const paymentId = scanResult.Items[0].id;
 
-        console.log('Payment failed:', failedIntent.id);
-        break;
-
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
+        await dynamo.send(new UpdateCommand({
+          TableName: TABLE_NAMES.PAYMENTS,
+          Key: { id: paymentId },
+          UpdateExpression: "set stripe_payment_status = :s",
+          ExpressionAttributeValues: {
+            ":s": status
+          }
+        }));
+        console.log(`Payment ${status}:`, paymentIntent.id);
+      } else {
+        console.log('Payment record not found for intent:', paymentIntent.id);
+      }
+    } else {
+      console.log(`Unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
