@@ -3,7 +3,7 @@ import * as fal from "@fal-ai/serverless-client";
 
 // Configure the client with the API key
 fal.config({
-  credentials: process.env.FAL_AI_API_KEY,
+  credentials: process.env.FAL_KEY || process.env.FAL_AI_API_KEY,
 });
 
 export async function POST(req: NextRequest) {

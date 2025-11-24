@@ -251,6 +251,9 @@ export default function ImageEditor() {
     await generateImage(style);
   };
 
+  // Provider selection
+  const [useVertexAI, setUseVertexAI] = useState<boolean>(true);
+
   // Unified generation helper
   const generateImage = async (styleOverride?: string) => {
     setLoading(true);
@@ -262,7 +265,11 @@ export default function ImageEditor() {
       const imageDataURL = imageEl?.src || '';
       const maskDataURL = maskCanvasRef.current?.toDataURL() || '';
 
-      const response = await fetch('/api/fal-inpaint', {
+      // Choose API endpoint based on provider
+      const apiEndpoint = useVertexAI ? '/api/vertex-inpaint' : '/api/fal-inpaint';
+      console.log(`Generating with ${useVertexAI ? 'Vertex AI' : 'Fal.ai'}...`);
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -384,7 +391,17 @@ export default function ImageEditor() {
               )}
 
               {/* Dev Bypass Button */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                <div className="flex items-center justify-between text-xs text-gray-600 bg-gray-100 p-2 rounded">
+                  <span>Provider: <b>{useVertexAI ? 'Google Vertex AI' : 'Fal.ai'}</b></span>
+                  <button
+                    onClick={() => setUseVertexAI(!useVertexAI)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Switch
+                  </button>
+                </div>
+
                 <button
                   onClick={() => generateImage()}
                   className="w-full py-2 bg-gray-800 text-white text-xs rounded hover:bg-gray-700"

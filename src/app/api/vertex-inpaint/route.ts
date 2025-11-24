@@ -1,0 +1,118 @@
+import { NextRequest, NextResponse } from "next/server";
+import { GoogleAuth } from "google-auth-library";
+
+// Initialize Google Auth
+const auth = new GoogleAuth({
+    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+});
+
+export async function POST(req: NextRequest) {
+    try {
+        const body = await req.json();
+        const { prompt, image, mask, strength, seed } = body;
+
+        if (!prompt || !image || !mask) {
+            return NextResponse.json(
+                { error: "Missing required fields: prompt, image, mask" },
+                { status: 400 }
+            );
+        }
+
+        // Get Project ID and Location from env
+        const projectId = process.env.GOOGLE_PROJECT_ID || process.env.GCP_PROJECT_ID;
+        const location = process.env.GOOGLE_LOCATION || "us-central1";
+
+        if (!projectId) {
+            console.error("Missing GOOGLE_PROJECT_ID");
+            return NextResponse.json(
+                { error: "Server configuration error: Missing Google Project ID" },
+                { status: 500 }
+            );
+        }
+
+        // Get Access Token
+        const client = await auth.getClient();
+        const accessToken = await client.getAccessToken();
+
+        if (!accessToken.token) {
+            throw new Error("Failed to generate Google Access Token");
+        }
+
+        // Helper to extract Base64
+        const extractBase64 = (dataUrl: string) => {
+            const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (!matches || matches.length !== 3) {
+                throw new Error("Invalid Data URL format");
+            }
+            return matches[2];
+        };
+
+        const imageBase64 = extractBase64(image);
+        const maskBase64 = extractBase64(mask);
+
+        // Vertex AI API Endpoint for Imagen 3 (or 2)
+        // Note: Model version might need adjustment (imagegeneration@006 is Imagen 2, imagen-3.0-generate-001 for 3)
+        // Using 'imagegeneration@006' as a safe default for now, or 'imagen-3.0-capability-001' if available.
+        // Let's try the publisher endpoint structure.
+        const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/imagegeneration@006:predict`;
+
+        console.log(`Calling Vertex AI: ${endpoint}`);
+
+        const requestBody = {
+            instances: [
+                {
+                    image: { bytes: imageBase64 },
+                    mask: {
+                        image: { bytes: maskBase64 }, // Mask for inpainting
+                    },
+                    prompt: prompt,
+                },
+            ],
+            parameters: {
+                sampleCount: 1,
+                seed: seed || Math.floor(Math.random() * 1000000),
+                // metricSpec: { "duration": 0 }, // Optional
+                // editConfig: { // Specific to some versions
+                //   editMode: "inpainting-insert",
+                // },
+            },
+        };
+
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken.token}`,
+                "Content-Type": "application/json; charset=utf-8",
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Vertex AI Error:", errorText);
+            throw new Error(`Vertex AI API failed: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        // Parse prediction
+        if (!data.predictions || data.predictions.length === 0) {
+            throw new Error("No predictions returned from Vertex AI");
+        }
+
+        const outputBase64 = data.predictions[0].bytesBase64Encoded;
+        const outputMimeType = data.predictions[0].mimeType || "image/png";
+        const outputImageUrl = `data:${outputMimeType};base64,${outputBase64}`;
+
+        return NextResponse.json({
+            image: outputImageUrl,
+            model_used: "Google Vertex AI (Imagen)",
+            seed: seed
+        });
+
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error("Vertex AI Route Error:", message);
+        return NextResponse.json({ error: message }, { status: 500 });
+    }
+}
