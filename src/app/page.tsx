@@ -3,7 +3,10 @@ import Image from "next/image";
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white relative">
+            {/* Blue Vignette Overlay */}
+            <div className="fixed inset-0 pointer-events-none z-[100] shadow-[inset_0_0_80px_rgba(59,130,246,0.4)] md:shadow-[inset_0_0_150px_rgba(59,130,246,0.3)] mix-blend-multiply" />
+
             {/* Header */}
             <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
                 <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
