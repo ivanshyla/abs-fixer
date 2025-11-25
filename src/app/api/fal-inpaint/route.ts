@@ -41,12 +41,14 @@ export async function POST(req: NextRequest) {
 
         // Upload to Fal Storage (pass Buffer directly)
         console.log(`${label} Uploading Buffer...`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const url = await fal.storage.upload(buffer as any);
         console.log(`${label} Uploaded to: ${url}`);
         return url;
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(`Error processing ${label}:`, err);
-        throw new Error(`Failed to process ${label}: ${err.message}`);
+        const message = err instanceof Error ? err.message : String(err);
+        throw new Error(`Failed to process ${label}: ${message}`);
       }
     };
 
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
 
     // Run inference
     console.log("Starting inference...");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = await fal.subscribe("fal-ai/flux-general/inpainting", {
       input: {
         image_url: imageUrl,
