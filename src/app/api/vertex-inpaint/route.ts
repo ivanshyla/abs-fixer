@@ -2,9 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
 
 // Initialize Google Auth
-const auth = new GoogleAuth({
-    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-});
+const getGoogleAuth = () => {
+    const credentialsJson = process.env.GOOGLE_CREDENTIALS;
+    if (credentialsJson) {
+        try {
+            const credentials = JSON.parse(credentialsJson);
+            return new GoogleAuth({
+                credentials,
+                scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+            });
+        } catch (e) {
+            console.error("Failed to parse GOOGLE_CREDENTIALS", e);
+        }
+    }
+    return new GoogleAuth({
+        scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    });
+};
+
+const auth = getGoogleAuth();
 
 export async function POST(req: NextRequest) {
     try {
