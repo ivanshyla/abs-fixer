@@ -3,108 +3,63 @@ import Image from "next/image";
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen bg-white">
-            {/* Header */}
-            <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-                <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
-                            <div className="text-white text-sm font-bold">AB</div>
-                        </div>
-                        <span className="text-xl font-bold text-gray-900">ABS Fixer</span>
-                    </Link>
-                    <Link href="/editor">
-                        <button className="px-6 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition-colors">
-                            Try Now
-                        </button>
-                    </Link>
-                </div>
+        <div className="relative min-h-screen w-full overflow-hidden bg-black text-white font-sans selection:bg-white selection:text-black">
+            {/* Background Image */}
+            <div className="absolute inset-0 z-0">
+                <Image
+                    src="/statue-bg.png"
+                    alt="Statue Background"
+                    fill
+                    className="object-cover object-center grayscale contrast-125"
+                    priority
+                />
+                {/* Subtle overlay to ensure text readability if needed, but keeping it minimal for brutalist look */}
+                <div className="absolute inset-0 bg-black/10" />
+            </div>
+
+            {/* Header / Logo */}
+            <header className="absolute top-0 left-0 right-0 z-50 p-6 flex justify-between items-center">
+                <Link href="/" className="group">
+                    <span className="text-sm font-bold tracking-[0.2em] uppercase opacity-70 group-hover:opacity-100 transition-opacity">
+                        ABS.AI
+                    </span>
+                </Link>
             </header>
 
-            {/* Hero Section */}
-            <section className="pt-20 pb-32 px-6 text-center bg-gradient-to-b from-blue-50 to-white">
-                <div className="max-w-4xl mx-auto">
-                    <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight">
-                        Get <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">6-Pack Abs</span> in Seconds with AI
-                    </h1>
-                    <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
-                        Transform your photos instantly. Natural, realistic results tailored to your body type. No gym required (yet).
-                    </p>
-                    <Link href="/editor">
-                        <button className="px-10 py-5 bg-blue-600 text-white text-xl rounded-full font-bold hover:bg-blue-700 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
-                            Start Transformation
+            {/* Main Content */}
+            <main className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4">
+                {/* Massive Title */}
+                <h1 className="text-[5rem] md:text-[9rem] leading-none font-black tracking-tighter mb-12 uppercase mix-blend-overlay opacity-90">
+                    ABS.AI
+                </h1>
+
+                {/* Buttons Container */}
+                <div className="flex flex-col gap-4 w-full max-w-xs md:max-w-sm">
+                    <Link href="/editor" className="w-full">
+                        <button className="w-full bg-white text-black font-bold py-4 px-8 rounded-full text-sm md:text-base hover:scale-105 transition-transform duration-200 uppercase tracking-widest shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                            MAKE A GOOD ABS
                         </button>
                     </Link>
-                    <p className="mt-4 text-sm text-gray-500">No subscription. Instant results.</p>
+
+                    {/* Secondary Button (Optional, linking to same editor for now or scroll) */}
+                    <Link href="/editor" className="w-full">
+                        <button className="w-full bg-white text-black font-bold py-4 px-8 rounded-full text-sm md:text-base hover:scale-105 transition-transform duration-200 uppercase tracking-widest shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                            WRITE A PROMPT
+                        </button>
+                    </Link>
                 </div>
-            </section>
 
-            {/* Demo/Examples Section */}
-            <section className="py-20 bg-white">
-                <div className="max-w-6xl mx-auto px-6">
-                    <h2 className="text-3xl font-bold text-center mb-16">Real Results</h2>
+                {/* Footer Text */}
+                <p className="mt-12 text-xs md:text-sm font-medium tracking-[0.3em] uppercase opacity-60">
+                    No gym required (yet)
+                </p>
+            </main>
 
-                    <div className="grid md:grid-cols-2 gap-12 items-center">
-                        <div className="space-y-4">
-                            <div className="bg-gray-100 rounded-2xl overflow-hidden aspect-[3/4] relative group">
-                                <Image
-                                    src="/before.jpg"
-                                    alt="Before transformation"
-                                    fill
-                                    className="object-cover"
-                                />
-                                <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium">Before</div>
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="bg-gray-100 rounded-2xl overflow-hidden aspect-[3/4] relative group shadow-2xl ring-4 ring-blue-100">
-                                <Image
-                                    src="/after.jpg"
-                                    alt="After transformation"
-                                    fill
-                                    className="object-cover"
-                                />
-                                <div className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">After (Natural Fit)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* How it Works */}
-            <section className="py-20 bg-gray-50">
-                <div className="max-w-6xl mx-auto px-6">
-                    <h2 className="text-3xl font-bold text-center mb-16">How It Works</h2>
-
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {[
-                            { icon: "📸", title: "1. Upload Photo", desc: "Choose a photo with good lighting showing your torso." },
-                            { icon: "🖌️", title: "2. Paint Mask", desc: "Highlight the area where you want your abs to appear." },
-                            { icon: "✨", title: "3. Get Results", desc: "AI generates realistic abs in seconds. Download or retry." }
-                        ].map((step, i) => (
-                            <div key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
-                                <div className="text-4xl mb-6">{step.icon}</div>
-                                <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                                <p className="text-gray-600">{step.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA */}
-            <section className="py-24 text-center">
-                <h2 className="text-4xl font-bold mb-8">Ready to upgrade your look?</h2>
-                <Link href="/editor">
-                    <button className="px-10 py-5 bg-gray-900 text-white text-xl rounded-full font-bold hover:bg-gray-800 transition-all shadow-lg">
-                        Try ABS Fixer Now
-                    </button>
-                </Link>
-            </section>
-
-            {/* Footer */}
-            <footer className="py-8 border-t border-gray-100 text-center text-gray-500 text-sm">
-                © {new Date().getFullYear()} ABS Fixer. All rights reserved.
+            {/* Minimal Footer */}
+            <footer className="absolute bottom-6 w-full text-center z-10">
+                <p className="text-[10px] uppercase tracking-widest opacity-30">
+                    © {new Date().getFullYear()} ABS Fixer
+                </p>
             </footer>
         </div>
     );
