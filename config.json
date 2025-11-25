@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "pricing": {
     "perGeneration": {
-      "amount": 500,
+      "amount": 100,
       "currency": "usd",
-      "display": "$5.00"
+      "display": "$1.00"
     }
   },
   "aiModels": {
@@ -24,19 +24,19 @@
       "id": "natural_fit",
       "label": "Natural Fit",
       "description": "Subtle, natural definition",
-      "prompt": "subtle natural abdominal definition, realistic athletic physique, minimal enhancement"
+      "prompt": "Transform the entire torso and body into a naturally fit, athletic physique. Add subtle, realistic abdominal definition with visible muscle tone. Enhance chest, shoulders, and arms proportionally. Maintain natural skin texture, lighting, and realistic anatomy. Remove any excess body fat while keeping a healthy, achievable look. Professional fitness photography quality."
     },
     {
       "id": "athletic",
       "label": "Athletic",
       "description": "Moderate muscle tone",
-      "prompt": "moderate muscle tone, athletic six-pack abs, natural fitness level"
+      "prompt": "Transform the entire body into an athletic, well-trained physique. Create clear six-pack abs with moderate muscle definition. Enhance chest muscles, defined shoulders, toned arms, and visible obliques. Add natural vascularity and muscle separation. Maintain realistic proportions and natural lighting. Professional athlete body composition with 12-15% body fat appearance."
     },
     {
       "id": "defined",
       "label": "Defined",
       "description": "Clear six-pack visible",
-      "prompt": "clear defined six-pack abs, strong muscle definition, fit physique"
+      "prompt": "Transform the entire body into a highly defined, muscular physique. Create prominent six-pack abs with deep cuts and strong definition. Add muscular chest, broad shoulders, defined arms with visible veins, and sculpted obliques. Show clear muscle separation and low body fat (8-10%). Maintain natural skin texture and professional bodybuilding photography quality. Peak athletic condition."
     }
   ],
   "features": {
@@ -47,11 +47,12 @@
   },
   "limits": {
     "maxImageSize": 10485760,
-    "allowedFormats": ["image/jpeg", "image/png", "image/webp"],
+    "allowedFormats": [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ],
     "maxBrushSize": 80,
     "minBrushSize": 20
   }
 }
-
-
-

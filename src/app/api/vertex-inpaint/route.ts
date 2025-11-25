@@ -50,10 +50,7 @@ export async function POST(req: NextRequest) {
         const imageBase64 = extractBase64(image);
         const maskBase64 = extractBase64(mask);
 
-        // Vertex AI API Endpoint for Imagen 3 (or 2)
-        // Note: Model version might need adjustment (imagegeneration@006 is Imagen 2, imagen-3.0-generate-001 for 3)
-        // Using 'imagegeneration@006' as a safe default for now, or 'imagen-3.0-capability-001' if available.
-        // Let's try the publisher endpoint structure.
+        // Vertex AI API Endpoint for Imagen
         const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/imagegeneration@006:predict`;
 
         console.log(`Calling Vertex AI: ${endpoint}`);
@@ -61,20 +58,20 @@ export async function POST(req: NextRequest) {
         const requestBody = {
             instances: [
                 {
-                    image: { bytes: imageBase64 },
-                    mask: {
-                        image: { bytes: maskBase64 }, // Mask for inpainting
-                    },
                     prompt: prompt,
+                    image: {
+                        bytesBase64Encoded: imageBase64
+                    },
+                    mask: {
+                        image: {
+                            bytesBase64Encoded: maskBase64
+                        }
+                    }
                 },
             ],
             parameters: {
                 sampleCount: 1,
                 seed: seed || Math.floor(Math.random() * 1000000),
-                // metricSpec: { "duration": 0 }, // Optional
-                // editConfig: { // Specific to some versions
-                //   editMode: "inpainting-insert",
-                // },
             },
         };
 

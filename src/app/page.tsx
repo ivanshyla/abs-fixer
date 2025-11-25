@@ -32,10 +32,10 @@ export default function LandingPage() {
                     </p>
                     <Link href="/editor">
                         <button className="px-10 py-5 bg-blue-600 text-white text-xl rounded-full font-bold hover:bg-blue-700 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
-                            Start Transformation ($1.00)
+                            Start Transformation
                         </button>
                     </Link>
-                    <p className="mt-4 text-sm text-gray-500">No subscription. Pay per use.</p>
+                    <p className="mt-4 text-sm text-gray-500">No subscription. Instant results.</p>
                 </div>
             </section>
 

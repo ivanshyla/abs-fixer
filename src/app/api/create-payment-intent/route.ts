@@ -64,12 +64,14 @@ export async function POST(req: NextRequest) {
       await dynamo.send(new PutCommand({
         TableName: TABLE_NAMES.PAYMENTS,
         Item: {
-          id: uuidv4(),
+          id: paymentIntent.id,
           user_id: userId,
           stripe_payment_intent_id: paymentIntent.id,
           stripe_payment_status: paymentIntent.status,
           amount: PRICE_IN_CENTS,
           currency: 'usd',
+          credits_total: 6,
+          credits_used: 0,
           created_at: new Date().toISOString(),
         }
       }));

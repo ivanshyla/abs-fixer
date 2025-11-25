@@ -23,7 +23,7 @@
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "@tensorflow/tfjs-converter": "^4.22.0",
     "@tensorflow/tfjs-core": "^4.22.0",
-    "google-auth-library": "^9.14.2",
+    "google-auth-library": "^9.15.1",
     "konva": "^9.3.22",
     "next": "15.5.0",
     "openai": "^5.16.0",

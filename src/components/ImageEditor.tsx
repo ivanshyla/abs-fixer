@@ -30,6 +30,17 @@ export default function ImageEditor() {
   // User choices
   const [selectedAbsType, setSelectedAbsType] = useState<string>('natural_fit');
   const [userEmail, setUserEmail] = useState<string>('');
+  const [intensity, setIntensity] = useState<number>(50); // 0-100 slider
+  const [credits, setCredits] = useState<number>(0);
+  const [provider, setProvider] = useState<'fal' | 'vertex' | 'getimg'>('fal');
+
+  // Load credits from local storage
+  React.useEffect(() => {
+    const savedCredits = localStorage.getItem('abs_credits');
+    const savedPaymentId = localStorage.getItem('abs_payment_id');
+    if (savedCredits) setCredits(parseInt(savedCredits));
+    if (savedPaymentId) setPaymentIntentId(savedPaymentId);
+  }, []);
 
   // Payment
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -94,25 +105,51 @@ export default function ImageEditor() {
     }
   };
 
-  // Generate after payment
-  const handleGenerateAfterPayment = async () => {
+  const getPromptForAbsType = (absType: string) => {
+    const prompts: Record<string, string> = {
+      natural_fit: 'Transform the entire torso and body into a naturally fit, athletic physique. Add subtle, realistic abdominal definition with visible muscle tone. Enhance chest, shoulders, and arms proportionally. Maintain natural skin texture, lighting, and realistic anatomy. Remove any excess body fat while keeping a healthy, achievable look. Professional fitness photography quality.',
+      athletic: 'Transform the entire body into an athletic, well-trained physique. Create clear six-pack abs with moderate muscle definition. Enhance chest muscles, defined shoulders, toned arms, and visible obliques. Add natural vascularity and muscle separation. Maintain realistic proportions and natural lighting. Professional athlete body composition with 12-15% body fat appearance.',
+      defined: 'Transform the entire body into a highly defined, muscular physique. Create prominent six-pack abs with deep cuts and strong definition. Add muscular chest, broad shoulders, defined arms with visible veins, and sculpted obliques. Show clear muscle separation and low body fat (8-10%). Maintain natural skin texture and professional bodybuilding photography quality. Peak athletic condition.',
+    };
+    return prompts[absType] || prompts.natural_fit;
+  };
+
+  // Unified generation helper
+  const generateImage = async (styleOverride?: string) => {
     setLoading(true);
     setError(null);
 
+    const styleToUse = styleOverride || selectedAbsType;
+
     try {
-      // Get image and mask as data URLs
       const imageDataURL = imageEl?.src || '';
       const maskDataURL = maskCanvasRef.current?.toDataURL() || '';
 
-      // Call generation API (Restored Fal.ai)
-      const response = await fetch('/api/fal-inpaint', {
+      // Get dimensions
+      const width = imageEl?.naturalWidth;
+      const height = imageEl?.naturalHeight;
+
+      // Choose API endpoint based on provider
+      const apiEndpoint =
+        provider === 'vertex' ? '/api/vertex-inpaint' :
+          provider === 'getimg' ? '/api/getimg-inpaint' :
+            '/api/fal-inpaint';
+
+      console.log(`Generating with ${provider}...`);
+
+      // Map 0-100 slider to 0.1-1.0 strength
+      const strengthValue = 0.1 + (intensity / 100) * 0.9;
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: getPromptForAbsType(selectedAbsType),
+          prompt: getPromptForAbsType(styleToUse),
           image: imageDataURL,
           mask: maskDataURL,
-          strength: 0.4,
+          strength: strengthValue,
+          width,
+          height,
         }),
       });
 
@@ -122,19 +159,19 @@ export default function ImageEditor() {
         throw new Error(data.error || 'Generation failed');
       }
 
-      // Save generation to database
+      // Save generation
       const saveResponse = await fetch('/api/save-generation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: null, // TODO: Add auth
-          absType: selectedAbsType,
+          userId: null,
+          absType: styleToUse,
           outputImageUrl: data.image,
           modelUsed: data.model_used,
-          promptUsed: getPromptForAbsType(selectedAbsType),
-          strength: 0.25,
+          promptUsed: getPromptForAbsType(styleToUse),
+          strength: strengthValue,
           seed: data.seed,
-          paymentId: paymentIntentId,
+          paymentId: paymentIntentId || 'dev_bypass',
         }),
       });
 
@@ -146,11 +183,55 @@ export default function ImageEditor() {
 
       setResultUrl(data.image);
       setStep('result');
+      setUserRating(null);
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Generate after payment (First time)
+  const handleGenerateAfterPayment = async () => {
+    // Set initial credits (6 total, consume 1 now = 5 left)
+    const newCredits = 5;
+    setCredits(newCredits);
+    localStorage.setItem('abs_credits', newCredits.toString());
+    if (paymentIntentId) localStorage.setItem('abs_payment_id', paymentIntentId);
+
+    await generateImage();
+  };
+
+  // Wrapper to handle credit deduction
+  const handleCreditGeneration = async () => {
+    if (credits > 0) {
+      const newCredits = credits - 1;
+      setCredits(newCredits);
+      localStorage.setItem('abs_credits', newCredits.toString());
+      await generateImage();
+    } else {
+      handleProceedToPayment();
+    }
+  };
+
+  // Handle regeneration with new style
+  const handleRegenerate = async (style: string) => {
+    setSelectedAbsType(style);
+    // We need to use the new style immediately, not wait for state update
+    // So we'll create a helper that accepts style override
+    // Also check credits? For now, let's assume regeneration consumes a credit.
+    // But handleRegenerate is called from ResultView.
+    // We should probably check credits there too.
+    if (credits > 0) {
+      const newCredits = credits - 1;
+      setCredits(newCredits);
+      localStorage.setItem('abs_credits', newCredits.toString());
+      await generateImage(style);
+    } else {
+      setError("No credits remaining. Please refresh to pay again.");
+      // Or redirect to pay
     }
   };
 
@@ -171,153 +252,6 @@ export default function ImageEditor() {
       setUserRating(rating);
     } catch (err) {
       console.error('Rating failed:', err);
-    }
-  };
-
-  const getPromptForAbsType = (absType: string) => {
-    const prompts: Record<string, string> = {
-      natural_fit: 'subtle natural abdominal definition, realistic athletic physique, minimal enhancement',
-      athletic: 'moderate muscle tone, athletic six-pack abs, natural fitness level',
-      defined: 'clear defined six-pack abs, strong muscle definition, fit physique',
-    };
-    return prompts[absType] || prompts.natural_fit;
-  };
-
-  // Dev bypass
-  const handleDevGenerate = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Get image and mask as data URLs
-      const imageDataURL = imageEl?.src || '';
-      const maskDataURL = maskCanvasRef.current?.toDataURL() || '';
-
-      // Call generation API (Restored Fal.ai)
-      const response = await fetch('/api/fal-inpaint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: getPromptForAbsType(selectedAbsType),
-          image: imageDataURL,
-          mask: maskDataURL,
-          strength: 0.4,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Generation failed');
-      }
-
-      // Save generation to database
-      const saveResponse = await fetch('/api/save-generation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: null,
-          absType: selectedAbsType,
-          outputImageUrl: data.image,
-          modelUsed: data.model_used,
-          promptUsed: getPromptForAbsType(selectedAbsType),
-          strength: 0.4,
-          seed: data.seed,
-          paymentId: 'dev_bypass',
-        }),
-      });
-
-      const saveData = await saveResponse.json();
-
-      if (saveResponse.ok) {
-        setGenerationId(saveData.generation.id);
-      }
-
-      setResultUrl(data.image);
-      setStep('result');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle regeneration with new style
-  const handleRegenerate = async (style: string) => {
-    setSelectedAbsType(style);
-    // We need to use the new style immediately, not wait for state update
-    // So we'll create a helper that accepts style override
-    await generateImage(style);
-  };
-
-  // Provider selection
-  const [useVertexAI, setUseVertexAI] = useState<boolean>(true);
-
-  // Unified generation helper
-  const generateImage = async (styleOverride?: string) => {
-    setLoading(true);
-    setError(null);
-
-    const styleToUse = styleOverride || selectedAbsType;
-
-    try {
-      const imageDataURL = imageEl?.src || '';
-      const maskDataURL = maskCanvasRef.current?.toDataURL() || '';
-
-      // Choose API endpoint based on provider
-      const apiEndpoint = useVertexAI ? '/api/vertex-inpaint' : '/api/fal-inpaint';
-      console.log(`Generating with ${useVertexAI ? 'Vertex AI' : 'Fal.ai'}...`);
-
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: getPromptForAbsType(styleToUse),
-          image: imageDataURL,
-          mask: maskDataURL,
-          strength: 0.4,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Generation failed');
-      }
-
-      // Save generation
-      const saveResponse = await fetch('/api/save-generation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: null,
-          absType: styleToUse,
-          outputImageUrl: data.image,
-          modelUsed: data.model_used,
-          promptUsed: getPromptForAbsType(styleToUse),
-          strength: 0.4,
-          seed: data.seed,
-          paymentId: paymentIntentId || 'dev_bypass', // Use existing payment ID or dev
-        }),
-      });
-
-      const saveData = await saveResponse.json();
-
-      if (saveResponse.ok) {
-        setGenerationId(saveData.generation.id);
-      }
-
-      setResultUrl(data.image);
-      setStep('result');
-      // Reset rating for new result
-      setUserRating(null);
-
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -356,6 +290,27 @@ export default function ImageEditor() {
               onSelect={setSelectedAbsType}
             />
 
+            {/* Intensity Slider */}
+            <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+              <div className="flex justify-between mb-2">
+                <label className="text-sm font-semibold">Transformation Intensity</label>
+                <span className="text-sm text-gray-500">{intensity}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={intensity}
+                onChange={(e) => setIntensity(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Subtle</span>
+                <span>Balanced</span>
+                <span>Strong</span>
+              </div>
+            </div>
+
             <div className="mt-8 p-4 bg-gray-50 rounded-lg">
               <div className="mb-4">
                 <label className="block text-sm font-semibold mb-2">Email Address</label>
@@ -372,16 +327,31 @@ export default function ImageEditor() {
                 <div className="mb-4 p-2 bg-red-50 text-red-600 text-sm rounded">{error}</div>
               )}
 
-              <button
-                onClick={handleProceedToPayment}
-                disabled={loading || !maskImage || !userEmail}
-                className={`w-full py-3 rounded-lg font-bold transition-all ${maskImage && userEmail
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-              >
-                {loading ? 'Processing...' : 'Proceed to Payment ($1.00)'}
-              </button>
+              {credits > 0 ? (
+                <div className="mb-4">
+                  <div className="text-sm font-bold text-green-600 mb-2">
+                    Credits Remaining: {credits}
+                  </div>
+                  <button
+                    onClick={handleCreditGeneration}
+                    disabled={loading || !maskImage}
+                    className="w-full py-3 rounded-lg font-bold bg-green-600 text-white hover:bg-green-700 shadow-md"
+                  >
+                    {loading ? 'Generating...' : 'Generate Image (1 Credit)'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleProceedToPayment}
+                  disabled={loading || !maskImage || !userEmail}
+                  className={`w-full py-3 rounded-lg font-bold transition-all ${maskImage && userEmail
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                >
+                  {loading ? 'Processing...' : 'Proceed to Payment ($1.00)'}
+                </button>
+              )}
 
               {/* Step Hint */}
               {(!maskImage || !userEmail) && (
@@ -392,14 +362,26 @@ export default function ImageEditor() {
 
               {/* Dev Bypass Button */}
               <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-                <div className="flex items-center justify-between text-xs text-gray-600 bg-gray-100 p-2 rounded">
-                  <span>Provider: <b>{useVertexAI ? 'Google Vertex AI' : 'Fal.ai'}</b></span>
-                  <button
-                    onClick={() => setUseVertexAI(!useVertexAI)}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Switch
-                  </button>
+                <div className="bg-gray-100 p-3 rounded">
+                  <label className="block text-xs font-semibold text-gray-600 mb-2">AI Provider:</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'fal', label: 'Fal.ai' },
+                      { value: 'vertex', label: 'Google' },
+                      { value: 'getimg', label: 'GetImg' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setProvider(opt.value as 'fal' | 'vertex' | 'getimg')}
+                        className={`py-1.5 px-2 rounded text-xs font-medium transition-all ${provider === opt.value
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button
@@ -420,7 +402,7 @@ export default function ImageEditor() {
           {stripePromise ? (
             <Elements stripe={stripePromise} options={{ clientSecret }}>
               <PaymentForm
-                onSuccess={() => generateImage()}
+                onSuccess={handleGenerateAfterPayment}
                 onError={setError}
                 loading={loading}
               />
