@@ -15,6 +15,33 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ABS.ai - Body Enhancer",
   description: "Transform your photos with AI-powered abdominal enhancements.",
+  openGraph: {
+    title: "ABS.ai - Body Enhancer",
+    description: "Transform your photos with AI-powered abdominal enhancements.",
+    url: "https://absai.app",
+    siteName: "ABS.ai",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ABS.ai Logo",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ABS.ai - Body Enhancer",
+    description: "Transform your photos with AI-powered abdominal enhancements.",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
