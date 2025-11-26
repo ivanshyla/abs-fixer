@@ -11,11 +11,8 @@ export default function LandingPage() {
             {/* Header */}
             <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
                 <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
-                            <div className="text-white text-sm font-bold">AB</div>
-                        </div>
-                        <span className="text-xl font-bold text-gray-900">ABS Fixer</span>
+                    <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+                        <span className="text-2xl font-semibold text-black tracking-tight" style={{ fontFamily: '"Gill Sans", "Gill Sans MT", Calibri, sans-serif' }}>ABS.AI</span>
                     </Link>
                     <Link href="/editor">
                         <button className="px-6 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition-colors">
@@ -101,7 +98,7 @@ export default function LandingPage() {
 
             {/* Footer */}
             <footer className="py-8 border-t border-gray-100 text-center text-gray-500 text-sm">
-                © {new Date().getFullYear()} ABS Fixer. All rights reserved. Tailwind inc.
+                © {new Date().getFullYear()} ABS.AI. All rights reserved. Tailwind inc.
             </footer>
         </div>
     );
