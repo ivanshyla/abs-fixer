@@ -17,12 +17,9 @@ export default function Home() {
       <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
-                <div className="text-white text-sm font-bold">AB</div>
-              </div>
-              <h1 className="text-xl font-semibold text-gray-900">ABS Fixer</h1>
-            </div>
+            <a href="/" className="flex items-center hover:opacity-80 transition-opacity">
+              <span className="text-2xl font-semibold text-black tracking-tight" style={{ fontFamily: '"Gill Sans", "Gill Sans MT", Calibri, sans-serif' }}>ABS.AI</span>
+            </a>
             <div className="text-sm text-gray-500">AI-Powered Enhancement</div>
           </div>
         </div>
@@ -42,6 +39,11 @@ export default function Home() {
         {/* Editor */}
         <ImageEditor />
       </main>
+
+      {/* Footer */}
+      <footer className="py-8 border-t border-gray-100 text-center text-gray-500 text-sm bg-white">
+        © {new Date().getFullYear()} ABS.AI. All rights reserved. Tailwind inc.
+      </footer>
     </div>
   );
 }

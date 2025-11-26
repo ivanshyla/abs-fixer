@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Get Project ID and Location from env
-        const projectId = process.env.GOOGLE_PROJECT_ID || process.env.GCP_PROJECT_ID;
+        const projectId = process.env.GOOGLE_PROJECT_ID || 'tailwind-452000';
         const location = process.env.GOOGLE_LOCATION || "us-central1";
 
         if (!projectId) {
