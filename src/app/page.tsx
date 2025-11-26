@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import ReferralSection from "@/components/ReferralSection";
 
 export default function LandingPage() {
     return (
@@ -95,15 +96,8 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* CTA */}
-            <section className="py-24 text-center">
-                <h2 className="text-4xl font-bold mb-8">Ready to upgrade your look?</h2>
-                <Link href="/editor">
-                    <button className="px-10 py-5 bg-gray-900 text-white text-xl rounded-full font-bold hover:bg-gray-800 transition-all shadow-lg">
-                        Try ABS Fixer Now
-                    </button>
-                </Link>
-            </section>
+            {/* Referral Section */}
+            <ReferralSection />
 
             {/* Footer */}
             <footer className="py-8 border-t border-gray-100 text-center text-gray-500 text-sm">

@@ -25,6 +25,7 @@
     "@tensorflow/tfjs-core": "^4.22.0",
     "google-auth-library": "^9.15.1",
     "konva": "^9.3.22",
+    "lucide-react": "^0.554.0",
     "next": "15.5.0",
     "openai": "^5.16.0",
     "react": "19.1.0",
