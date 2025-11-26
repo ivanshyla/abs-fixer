@@ -1,26 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
 
-// Initialize Google Auth
+// Initialize Google Auth with explicit credentials
 const getGoogleAuth = () => {
     const credentialsJson = process.env.GOOGLE_CREDENTIALS;
     if (credentialsJson) {
         try {
             const credentials = JSON.parse(credentialsJson);
+            // Use fromJSON for better compatibility with Amplify
             return new GoogleAuth({
                 credentials,
                 scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+                projectId: credentials.project_id,
             });
         } catch (e) {
-            console.error("Failed to parse GOOGLE_CREDENTIALS", e);
+            console.error("Failed to parse GOOGLE_CREDENTIALS:", e);
+            throw new Error("Invalid Google credentials configuration");
         }
     }
-    return new GoogleAuth({
-        scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-    });
+    throw new Error("GOOGLE_CREDENTIALS environment variable not set");
 };
 
-const auth = getGoogleAuth();
+let auth: GoogleAuth;
+try {
+    auth = getGoogleAuth();
+} catch (e) {
+    console.error("Google Auth initialization failed:", e);
+    // Create a dummy auth that will fail gracefully
+    auth = new GoogleAuth({
+        scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    });
+}
 
 export async function POST(req: NextRequest) {
     try {
