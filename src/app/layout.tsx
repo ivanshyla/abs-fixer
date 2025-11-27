@@ -38,9 +38,9 @@ export const metadata: Metadata = {
     images: ["https://absai.app/og-image.png"],
   },
   icons: {
-    icon: "/icon.svg?v=3",
-    shortcut: "/icon.svg?v=3",
-    apple: "/icon.svg?v=3",
+    icon: "/favicon-new.svg",
+    shortcut: "/favicon-new.svg",
+    apple: "/favicon-new.svg",
   },
 };
 
