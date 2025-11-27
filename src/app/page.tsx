@@ -31,7 +31,7 @@ export default function LandingPage() {
                         Transform your photos instantly. Natural, realistic results tailored to your body type. No gym required (yet).
                     </p>
                     <Link href="/editor">
-                        <button className="px-10 py-5 bg-blue-600 text-white text-xl rounded-full font-bold hover:bg-blue-700 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
+                        <button className="px-10 py-5 bg-blue-600 text-white text-xl rounded-full font-bold hover:bg-blue-700 transition-colors shadow-xl">
                             Start Transformation
                         </button>
                     </Link>
