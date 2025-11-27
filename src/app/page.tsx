@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import ReferralSection from "@/components/ReferralSection";
 
 export default function LandingPage() {
     return (
@@ -92,9 +91,6 @@ export default function LandingPage() {
                     </div>
                 </div>
             </section>
-
-            {/* Referral Section */}
-            <ReferralSection />
 
             {/* Footer */}
             <footer className="py-8 border-t border-gray-100 text-center text-gray-500 text-sm">

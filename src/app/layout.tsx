@@ -16,16 +16,16 @@ export const metadata: Metadata = {
   title: "ABS.ai - Body Enhancer",
   description: "Transform your photos with AI-powered abdominal enhancements.",
   openGraph: {
-    title: "ABS.ai - Body Enhancer",
-    description: "Transform your photos with AI-powered abdominal enhancements.",
+    title: "ABS.AI - Get 6-Pack Abs in Seconds",
+    description: "Transform your photos instantly with AI. Natural, realistic abs tailored to your body. No gym required (yet).",
     url: "https://absai.app",
-    siteName: "ABS.ai",
+    siteName: "ABS.AI",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://absai.app/og-image.png",
         width: 1200,
         height: 630,
-        alt: "ABS.ai Logo",
+        alt: "ABS.AI - AI-Powered Body Enhancement",
       },
     ],
     locale: "en_US",
@@ -33,14 +33,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ABS.ai - Body Enhancer",
-    description: "Transform your photos with AI-powered abdominal enhancements.",
-    images: ["/og-image.png"],
+    title: "ABS.AI - Get 6-Pack Abs in Seconds",
+    description: "Transform your photos instantly with AI. Natural, realistic abs tailored to your body.",
+    images: ["https://absai.app/og-image.png"],
   },
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
+    icon: "/icon.svg?v=3",
+    shortcut: "/icon.svg?v=3",
+    apple: "/icon.svg?v=3",
   },
 };
 

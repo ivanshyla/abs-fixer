@@ -12,8 +12,8 @@
     "stripe:listen": "stripe listen --forward-to localhost:3000/api/stripe-webhook"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.936.0",
-    "@aws-sdk/lib-dynamodb": "^3.936.0",
+    "@aws-sdk/client-dynamodb": "^3.940.0",
+    "@aws-sdk/lib-dynamodb": "^3.940.0",
     "@fal-ai/serverless-client": "^0.15.0",
     "@google/generative-ai": "^0.24.1",
     "@mediapipe/pose": "^0.5.1675469404",
