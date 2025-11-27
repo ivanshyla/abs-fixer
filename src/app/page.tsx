@@ -1,11 +1,27 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen bg-white relative">
-            {/* Blue Vignette Overlay */}
-            <div className="fixed inset-0 pointer-events-none z-[100] shadow-[inset_0_0_80px_rgba(59,130,246,0.4)] md:shadow-[inset_0_0_150px_rgba(59,130,246,0.3)] mix-blend-multiply" />
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative overflow-hidden">
+            {/* Animated blue vignette border */}
+            <div className="fixed inset-0 pointer-events-none z-10">
+                <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(37,99,235,0.3)] animate-pulse-slow"></div>
+            </div>
+
+            <style jsx>{`
+                @keyframes pulse-slow {
+                    0%, 100% {
+                        box-shadow: inset 0 0 100px rgba(37, 99, 235, 0.3);
+                    }
+                    50% {
+                        box-shadow: inset 0 0 120px rgba(37, 99, 235, 0.5);
+                    }
+                }
+                .animate-pulse-slow {
+                    animation: pulse-slow 3s ease-in-out infinite;
+                }
+            `}</style>
 
             {/* Header */}
             <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
