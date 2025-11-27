@@ -170,8 +170,8 @@ export default function CanvasEditor({
             {/* Controls */}
             <div className="flex flex-wrap gap-2 mb-4">
                 <button
-                    onClick={() => setTool('brush')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${tool === 'brush'
+                    onClick={() => setMode('brush')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${mode === 'brush'
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`}
@@ -179,8 +179,8 @@ export default function CanvasEditor({
                     Brush
                 </button>
                 <button
-                    onClick={() => setTool('eraser')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${tool === 'eraser'
+                    onClick={() => setMode('erase')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${mode === 'erase'
                         ? 'bg-red-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`}
@@ -191,16 +191,16 @@ export default function CanvasEditor({
                     <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Size:</label>
                     <input
                         type="range"
-                        min="5"
-                        max="50"
+                        min="20"
+                        max="80"
                         value={brushSize}
-                        onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                        onChange={(e) => setBrushSize(Number(e.target.value))}
                         className="flex-1"
                     />
                     <span className="text-sm text-gray-600 w-8">{brushSize}</span>
                 </div>
                 <button
-                    onClick={clearCanvas}
+                    onClick={clearMask}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-sm sm:text-base"
                 >
                     Clear
