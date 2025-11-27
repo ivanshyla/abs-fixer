@@ -35,6 +35,7 @@ export default function ImageEditor() {
   const [provider, setProvider] = useState<'fal' | 'vertex' | 'getimg'>('fal');
   const [showSaveWarning, setShowSaveWarning] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   // Use new credit system
   const { credits, loading: creditsLoading, useCredit, hasCredits } = useCredits();
@@ -341,16 +342,38 @@ export default function ImageEditor() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={handleProceedToPayment}
-                  disabled={loading || !maskImage || !userEmail}
-                  className={`w-full py-3 rounded-lg font-bold transition-all ${maskImage && userEmail
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
-                >
-                  {loading ? 'Processing...' : 'Proceed to Payment ($1.00)'}
-                </button>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <div className="text-sm text-gray-600 mb-1">Purchase Credits</div>
+                        <div className="text-2xl font-bold text-gray-900">$1.00</div>
+                      </div>
+                      <button
+                        onClick={() => setShowPricingModal(true)}
+                        className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center font-bold text-sm transition"
+                        title="Why $1?"
+                      >
+                        ?
+                      </button>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      • 1 credit = 1 generation<br />
+                      • $1 = 6 credits<br />
+                      • No subscription, pay once
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleProceedToPayment}
+                    disabled={loading || !maskImage || !userEmail}
+                    className={`w-full py-3 rounded-lg font-bold transition-all ${maskImage && userEmail
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                  >
+                    Proceed to Payment ($1.00)
+                  </button>
+                </div>
               )}
 
               {/* Step Hint */}
@@ -469,6 +492,72 @@ export default function ImageEditor() {
                 className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition"
               >
                 Continue Editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Breakdown Modal */}
+      {showPricingModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold">Why $1?</h3>
+                <button
+                  onClick={() => setShowPricingModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">
+                We believe in transparent pricing. Here's exactly where your dollar goes:
+              </p>
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">AI Generation Costs (6 images)</span>
+                  <span className="font-semibold">$0.54</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Payment Processing Fees</span>
+                  <span className="font-semibold">$0.09</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Server & Infrastructure</span>
+                  <span className="font-semibold">$0.08</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Advertising & Marketing</span>
+                  <span className="font-semibold">$0.12</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Taxes</span>
+                  <span className="font-semibold">$0.07</span>
+                </div>
+                <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
+                  <span className="text-gray-700 font-semibold">Our Margin (10%)</span>
+                  <span className="font-semibold text-green-600">$0.10</span>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+                <p className="mb-2">
+                  💡 <strong>Fun fact:</strong> Our Cursor AI subscription alone costs $200/month!
+                </p>
+                <p>
+                  We keep our margins modest to make AI transformation accessible to everyone.
+                </p>
+              </div>
+            </div>
+            <div className="p-6 bg-gray-50 rounded-b-2xl">
+              <button
+                onClick={() => setShowPricingModal(false)}
+                className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+              >
+                Got it!
               </button>
             </div>
           </div>
