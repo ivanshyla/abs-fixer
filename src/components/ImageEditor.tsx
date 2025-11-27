@@ -325,7 +325,17 @@ export default function ImageEditor() {
               </div>
 
               {error && (
-                <div className="mb-4 p-2 bg-red-50 text-red-600 text-sm rounded">{error}</div>
+                <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <span className="text-2xl">⚠️</span>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-semibold text-red-800 mb-1">Error</h3>
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {credits > 0 ? (
@@ -343,24 +353,41 @@ export default function ImageEditor() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-2">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
                       <div>
-                        <div className="text-sm text-gray-600 mb-1">Purchase Credits</div>
-                        <div className="text-2xl font-bold text-gray-900">$1.00</div>
+                        <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">One-Time Purchase</div>
+                        <div className="text-3xl font-bold text-gray-900">$1.00</div>
                       </div>
                       <button
                         onClick={() => setShowPricingModal(true)}
-                        className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center font-bold text-sm transition"
-                        title="Why $1?"
+                        className="w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 flex items-center justify-center font-bold shadow-md transition-all hover:scale-105"
+                        title="Why $1? See breakdown"
                       >
                         ?
                       </button>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      • 1 credit = 1 generation<br />
-                      • $1 = 6 credits<br />
-                      • No subscription, pay once
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-700">
+                        <span className="text-green-500 mr-2">✓</span>
+                        <span><strong>6 credits</strong> = 6 AI generations</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-700">
+                        <span className="text-green-500 mr-2">✓</span>
+                        <span>No subscription, no hidden fees</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-700">
+                        <span className="text-green-500 mr-2">✓</span>
+                        <span>Try all 3 AI providers</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <button
+                        onClick={() => setShowPricingModal(true)}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium underline"
+                      >
+                        See full cost breakdown →
+                      </button>
                     </div>
                   </div>
                   <button
