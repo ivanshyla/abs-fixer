@@ -168,28 +168,41 @@ export default function CanvasEditor({
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex flex-wrap gap-2 mb-4">
                 <button
-                    onClick={() => setMode('brush')}
-                    className={`px-4 py-2 rounded ${mode === 'brush' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                    onClick={() => setTool('brush')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${tool === 'brush'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
                 >
                     Brush
                 </button>
                 <button
-                    onClick={() => setMode('erase')}
-                    className={`px-4 py-2 rounded ${mode === 'erase' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                    onClick={() => setTool('eraser')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${tool === 'eraser'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
                 >
                     Eraser
                 </button>
-                <input
-                    type="range"
-                    min="20"
-                    max="80"
-                    value={brushSize}
-                    onChange={(e) => setBrushSize(Number(e.target.value))}
-                    className="flex-1"
-                />
-                <button onClick={clearMask} className="px-4 py-2 bg-red-500 text-white rounded">
+                <div className="flex items-center gap-2 flex-1 min-w-[120px]">
+                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Size:</label>
+                    <input
+                        type="range"
+                        min="5"
+                        max="50"
+                        value={brushSize}
+                        onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                        className="flex-1"
+                    />
+                    <span className="text-sm text-gray-600 w-8">{brushSize}</span>
+                </div>
+                <button
+                    onClick={clearCanvas}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-sm sm:text-base"
+                >
                     Clear
                 </button>
             </div>
