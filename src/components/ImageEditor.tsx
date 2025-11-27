@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import dynamic from "next/dynamic";
+import { useCredits } from "@/hooks/useCredits";
 
 // Import sub-components
 import UploadStep from "./image-editor/UploadStep";
@@ -31,14 +32,16 @@ export default function ImageEditor() {
   const [selectedAbsType, setSelectedAbsType] = useState<string>('natural_fit');
   const [userEmail, setUserEmail] = useState<string>('');
   const [intensity, setIntensity] = useState<number>(50); // 0-100 slider
-  const [credits, setCredits] = useState<number>(0);
   const [provider, setProvider] = useState<'fal' | 'vertex' | 'getimg'>('fal');
+  const [showSaveWarning, setShowSaveWarning] = useState(false);
+  const [feedbackGiven, setFeedbackGiven] = useState(false);
 
-  // Load credits from local storage
+  // Use new credit system
+  const { credits, loading: creditsLoading, useCredit, hasCredits } = useCredits();
+
+  // Load payment ID from local storage
   React.useEffect(() => {
-    const savedCredits = localStorage.getItem('abs_credits');
     const savedPaymentId = localStorage.getItem('abs_payment_id');
-    if (savedCredits) setCredits(parseInt(savedCredits));
     if (savedPaymentId) setPaymentIntentId(savedPaymentId);
   }, []);
 
@@ -195,22 +198,21 @@ export default function ImageEditor() {
 
   // Generate after payment (First time)
   const handleGenerateAfterPayment = async () => {
-    // Set initial credits (6 total, consume 1 now = 5 left)
-    const newCredits = 5;
-    setCredits(newCredits);
-    localStorage.setItem('abs_credits', newCredits.toString());
     if (paymentIntentId) localStorage.setItem('abs_payment_id', paymentIntentId);
-
     await generateImage();
+    setShowSaveWarning(true);
   };
 
   // Wrapper to handle credit deduction
   const handleCreditGeneration = async () => {
-    if (credits > 0) {
-      const newCredits = credits - 1;
-      setCredits(newCredits);
-      localStorage.setItem('abs_credits', newCredits.toString());
-      await generateImage();
+    if (hasCredits()) {
+      const success = await useCredit();
+      if (success) {
+        await generateImage();
+        setShowSaveWarning(true);
+      } else {
+        setError("Credit limit reached. Please try again later.");
+      }
     } else {
       handleProceedToPayment();
     }
@@ -219,19 +221,16 @@ export default function ImageEditor() {
   // Handle regeneration with new style
   const handleRegenerate = async (style: string) => {
     setSelectedAbsType(style);
-    // We need to use the new style immediately, not wait for state update
-    // So we'll create a helper that accepts style override
-    // Also check credits? For now, let's assume regeneration consumes a credit.
-    // But handleRegenerate is called from ResultView.
-    // We should probably check credits there too.
-    if (credits > 0) {
-      const newCredits = credits - 1;
-      setCredits(newCredits);
-      localStorage.setItem('abs_credits', newCredits.toString());
-      await generateImage(style);
+    if (hasCredits()) {
+      const success = await useCredit();
+      if (success) {
+        await generateImage(style);
+        setShowSaveWarning(true);
+      } else {
+        setError("Credit limit reached. Please try again later.");
+      }
     } else {
       setError("No credits remaining. Please refresh to pay again.");
-      // Or redirect to pay
     }
   };
 
@@ -250,6 +249,7 @@ export default function ImageEditor() {
       });
 
       setUserRating(rating);
+      setFeedbackGiven(true);
     } catch (err) {
       console.error('Rating failed:', err);
     }
@@ -423,6 +423,7 @@ export default function ImageEditor() {
         <ResultView
           resultUrl={resultUrl}
           userRating={userRating}
+          feedbackGiven={feedbackGiven}
           onRate={handleRating}
           onRegenerate={handleRegenerate}
           currentStyle={selectedAbsType}
@@ -431,6 +432,7 @@ export default function ImageEditor() {
             setImageEl(null);
             setResultUrl(null);
             setUserRating(null);
+            setFeedbackGiven(false);
             setMaskImage(null);
             // Clear mask canvas
             if (maskCanvasRef.current) {
@@ -442,6 +444,35 @@ export default function ImageEditor() {
             }
           }}
         />
+      )}
+
+      {/* Save Warning Modal */}
+      {showSaveWarning && resultUrl && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl max-w-md mx-4 text-center shadow-2xl">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h3 className="text-2xl font-bold mb-4">Save Your Photo Now!</h3>
+            <p className="text-gray-600 mb-6">
+              Your transformed photo will be lost if you close this page. Make sure to download it!
+            </p>
+            <div className="flex gap-4">
+              <a
+                href={resultUrl}
+                download="abs-fixer-result.png"
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                onClick={() => setShowSaveWarning(false)}
+              >
+                Download Now
+              </a>
+              <button
+                onClick={() => setShowSaveWarning(false)}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition"
+              >
+                Continue Editing
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {loading && step !== 'pay' && (

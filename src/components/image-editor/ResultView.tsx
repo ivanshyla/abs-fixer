@@ -4,6 +4,7 @@ import Image from "next/image";
 interface ResultViewProps {
     resultUrl: string;
     userRating: number | null;
+    feedbackGiven: boolean;
     onRate: (rating: -1 | 1) => void;
     onReset: () => void;
     onRegenerate: (style: string) => void;
@@ -13,6 +14,7 @@ interface ResultViewProps {
 export default function ResultView({
     resultUrl,
     userRating,
+    feedbackGiven,
     onRate,
     onReset,
     onRegenerate,
@@ -33,7 +35,7 @@ export default function ResultView({
             </div>
 
             {/* Rating */}
-            {userRating === null ? (
+            {!feedbackGiven ? (
                 <div className="mb-8">
                     <p className="mb-4 font-semibold">How do you like the result?</p>
                     <div className="flex justify-center gap-4">
@@ -52,10 +54,15 @@ export default function ResultView({
                     </div>
                 </div>
             ) : (
-                <div className={`mb-8 p-4 rounded-lg transition-all duration-500 ${userRating === 1 ? 'bg-green-50 text-green-800' : 'bg-orange-50 text-orange-800'}`}>
-                    {userRating === 1
-                        ? 'Thank you! Your feedback helps us improve.'
-                        : 'Sorry to hear that. Try a different style or adjust the mask.'}
+                <div className={`mb-8 p-4 rounded-lg transition-all duration-500 ${userRating === 1 ? 'bg-green-50 text-green-800 border-2 border-green-200' : 'bg-orange-50 text-orange-800 border-2 border-orange-200'}`}>
+                    <div className="flex items-center justify-center gap-2">
+                        <span className="text-2xl">{userRating === 1 ? '✓' : '⚠'}</span>
+                        <span className="font-semibold">
+                            {userRating === 1
+                                ? 'Thank you! Your feedback helps us improve.'
+                                : 'Sorry to hear that. Try a different style or adjust the mask.'}
+                        </span>
+                    </div>
                 </div>
             )}
 
@@ -69,8 +76,8 @@ export default function ResultView({
                             onClick={() => onRegenerate(style.id)}
                             disabled={currentStyle === style.id}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentStyle === style.id
-                                    ? 'bg-gray-200 text-gray-400 cursor-default'
-                                    : 'bg-white border border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 shadow-sm'
+                                ? 'bg-gray-200 text-gray-400 cursor-default'
+                                : 'bg-white border border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 shadow-sm'
                                 }`}
                         >
                             {style.label}
