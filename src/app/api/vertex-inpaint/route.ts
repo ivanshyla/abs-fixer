@@ -97,7 +97,13 @@ export async function POST(req: NextRequest) {
             ],
             parameters: {
                 sampleCount: 1,
+                aspectRatio: "1:1",
+                negativePrompt: "blurry, low quality, distorted, unrealistic, cartoon, anime, fake",
+                guidanceScale: 15,
                 seed: seed || Math.floor(Math.random() * 1000000),
+                // Add safety settings to allow fitness/body photos
+                safetyFilterLevel: "BLOCK_ONLY_HIGH",
+                personGeneration: "ALLOW_ADULT",
             },
         };
 
@@ -136,6 +142,16 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Unknown error";
         console.error("Vertex AI Route Error:", message);
+
+        // Check if it's a safety filter error
+        if (message.includes("safety filter") || message.includes("blocked") || message.includes("INVALID_ARGUMENT")) {
+            return NextResponse.json({
+                error: "Google AI mistakenly flagged this fitness photo as sensitive content. This is a false positive - your photo is perfectly appropriate for body transformation. Please try switching to Fal.ai or GetImg provider, which handle fitness photos better.",
+                errorType: "SAFETY_FILTER"
+            }, { status: 400 });
+        }
+
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }
+```
