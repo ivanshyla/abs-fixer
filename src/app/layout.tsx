@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     siteName: "ABS.AI",
     images: [
       {
-        url: "https://absai.app/og-image.jpg",
+        url: "https://absai.app/og-image.png",
         width: 1200,
         height: 630,
         alt: "ABS.AI - AI-Powered Body Enhancement",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ABS.AI - Get 6-Pack Abs in Seconds",
     description: "Transform your photos instantly with AI. Natural, realistic abs tailored to your body.",
-    images: ["https://absai.app/og-image.jpg"],
+    images: ["https://absai.app/og-image.png"],
   },
   icons: {
     icon: "/favicon-new.svg",
