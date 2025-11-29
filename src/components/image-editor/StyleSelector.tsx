@@ -25,7 +25,7 @@ export default function StyleSelector({ selectedType, onSelect }: StyleSelectorP
             {/* Abs Section */}
             <div>
                 <h3 className="text-sm font-bold text-brand-lighter mb-3 flex items-center gap-2">
-                    <span className="text-xl">💪</span> Abs Enhancement
+                    Abs Enhancement
                 </h3>
                 <div className="grid grid-cols-1 gap-2">
                     {TRANSFORMATION_CATEGORIES.abs.map((style) => (

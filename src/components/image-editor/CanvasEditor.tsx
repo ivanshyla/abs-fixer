@@ -144,7 +144,7 @@ export default function CanvasEditor({
                     Use the tools below to adjust the mask
                 </p>
             </div>
-            <div ref={containerRef} className="bg-brand-dark rounded-lg p-4 mb-4 border-2 border-dashed border-brand-light">
+            <div ref={containerRef} className="bg-brand-dark rounded-lg mb-4 border-2 border-dashed border-brand-light">
                 <Stage
                     ref={stageRef}
                     width={imageEl.width * scale}
