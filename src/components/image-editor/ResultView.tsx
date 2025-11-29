@@ -57,11 +57,11 @@ export default function ResultView({
             ) : (
                 <div className={`mb-8 p-4 rounded-lg transition-all duration-500 ${userRating === 1 ? 'bg-green-50 text-green-800 border-2 border-green-200' : 'bg-orange-50 text-orange-800 border-2 border-orange-200'}`}>
                     <div className="flex items-center justify-center gap-2">
-                        <span className="text-2xl">{userRating === 1 ? '✓' : '⚠'}</span>
+                        <span className="text-2xl">{userRating === 1 ? '✓' : '💪'}</span>
                         <span className="font-semibold">
                             {userRating === 1
                                 ? 'Thank you! Your feedback helps us improve.'
-                                : 'Sorry to hear that. Try a different style or adjust the mask.'}
+                                : 'Not happy with AI results? Try the gym for 6 months! 🏋️ In half a year, AI will be perfect AND you\'ll have real abs. Win-win! 😉'}
                         </span>
                     </div>
                 </div>
