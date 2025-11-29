@@ -305,7 +305,10 @@ export default function ImageEditor() {
 
   // Rating
   const handleRating = async (rating: -1 | 1) => {
-    if (!generationId) return;
+    if (!generationId) {
+      console.warn('Cannot rate: Missing generationId');
+      return;
+    }
 
     try {
       const feedback = rating === 1 ? 'like' : 'dislike';
@@ -363,7 +366,7 @@ export default function ImageEditor() {
 
             {/* Intensity Slider */}
             <div className="mt-6 p-4 bg-brand-dark rounded-lg border border-brand-medium">
-              <div className="flex justify-between mb-2">
+              <div className="flex justify-between items-center mb-2">
                 <label className="text-sm font-semibold text-brand-lighter">Transformation Intensity</label>
                 <span className="text-sm text-brand-light">{intensity}%</span>
               </div>
@@ -514,7 +517,7 @@ export default function ImageEditor() {
           onRate={handleRating}
           onRegenerate={handleRegenerate}
           currentStyle={selectedAbsType}
-          generationId={generationId}
+          generationId={generationId || undefined}
           onReset={() => {
             setStep('upload');
             setImageEl(null);

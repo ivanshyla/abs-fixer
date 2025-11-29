@@ -92,23 +92,28 @@ export async function POST(req: NextRequest) {
       Item: generation
     }));
 
-    // Save to training data table for ML dataset
-    await dynamo.send(new PutCommand({
-      TableName: TABLE_NAMES.TRAINING_DATA,
-      Item: {
-        id: generationId,
-        inputImageUrl: inputImageUrl || null,
-        maskUrl: maskImageUrl || null,
-        outputImageUrl,
-        prompt: promptUsed,
-        strength,
-        seed,
-        provider: provider || modelUsed,
-        absType,
-        feedback: null,
-        createdAt,
-      }
-    }));
+    // Save to training data table for ML dataset (Non-blocking)
+    try {
+      await dynamo.send(new PutCommand({
+        TableName: TABLE_NAMES.TRAINING_DATA,
+        Item: {
+          id: generationId,
+          inputImageUrl: inputImageUrl || null,
+          maskUrl: maskImageUrl || null,
+          outputImageUrl,
+          prompt: promptUsed,
+          strength,
+          seed,
+          provider: provider || modelUsed,
+          absType,
+          feedback: null,
+          createdAt,
+        }
+      }));
+    } catch (trainingDataError) {
+      console.warn('Failed to save to training data table:', trainingDataError);
+      // Continue execution - do not fail the request
+    }
 
     return NextResponse.json({ success: true, generation });
   } catch (error: unknown) {
