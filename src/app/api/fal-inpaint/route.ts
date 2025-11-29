@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as fal from "@fal-ai/serverless-client";
+import { getPromptForAbsType, getGenerationParams } from "@/lib/prompts";
 
 // Configure the client with the API key
 fal.config({
@@ -9,16 +10,20 @@ fal.config({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { prompt, image, mask, strength, seed } = body;
+    const { absType, intensity, image, mask, seed } = body;
 
-    if (!prompt || !image || !mask) {
+    if (!absType || !image || !mask) {
       return NextResponse.json(
-        { error: "Missing required fields: prompt, image, mask" },
+        { error: "Missing required fields: absType, image, mask" },
         { status: 400 }
       );
     }
 
-    console.log("Fal.ai Client Request:", { prompt, strength });
+    // Resolve prompt and params server-side
+    const prompt = getPromptForAbsType(absType);
+    const params = getGenerationParams(absType, intensity);
+
+    console.log("Fal.ai Client Request:", { absType, intensity, promptLength: prompt.length });
 
     // Helper to upload Data URL to Fal Storage
     const uploadToFal = async (dataUrl: string, label: string) => {
@@ -66,9 +71,9 @@ export async function POST(req: NextRequest) {
         image_url: imageUrl,
         mask_url: maskUrl,
         prompt: prompt,
-        num_inference_steps: 28,
-        guidance_scale: 2.5,
-        strength: strength || 0.4,
+        num_inference_steps: params.num_inference_steps,
+        guidance_scale: params.guidance_scale,
+        strength: params.strength,
         seed: seed,
         enable_safety_checker: false
       },
@@ -96,7 +101,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       image: outputImageUrl,
-      model_used: "Fal.ai Flux (Client Lib)"
+      model_used: "Fal.ai Flux (Client Lib)",
+      seed: result.seed // Return seed if available
     });
 
   } catch (error: unknown) {

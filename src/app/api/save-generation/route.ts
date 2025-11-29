@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
 import { PutCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from 'uuid';
+import { getPromptForAbsType } from '@/lib/prompts';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,15 +14,19 @@ export async function POST(req: NextRequest) {
       maskImageUrl,
       outputImageUrl,
       modelUsed,
-      promptUsed,
+      // promptUsed, // Client no longer sends this
       strength,
       seed,
       paymentId,
       provider,
+      intensity, // Client sends intensity now
     } = await req.json();
 
     const generationId = uuidv4();
     const createdAt = new Date().toISOString();
+
+    // Resolve prompt server-side
+    const promptUsed = getPromptForAbsType(absType);
 
     const generationParams = {
       prompt: promptUsed,
@@ -29,6 +34,7 @@ export async function POST(req: NextRequest) {
       seed,
       provider: provider || modelUsed,
       absType,
+      intensity,
     };
 
     const generation = {
@@ -40,7 +46,7 @@ export async function POST(req: NextRequest) {
       mask_image_url: maskImageUrl || null,
       output_image_url: outputImageUrl,
       model_used: modelUsed,
-      prompt_used: promptUsed || null,
+      prompt_used: promptUsed,
       strength: strength || null,
       seed: seed || null,
       payment_id: paymentId || null,

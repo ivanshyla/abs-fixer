@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
+import { getPromptForAbsType, getNegativePrompt, getGenerationParams } from "@/lib/prompts";
 
 // Initialize Google Auth with explicit credentials
 const getGoogleAuth = () => {
@@ -7,7 +8,6 @@ const getGoogleAuth = () => {
     if (credentialsJson) {
         try {
             const credentials = JSON.parse(credentialsJson);
-            // Use fromJSON for better compatibility with Amplify
             return new GoogleAuth({
                 credentials,
                 scopes: ["https://www.googleapis.com/auth/cloud-platform"],
@@ -21,28 +21,22 @@ const getGoogleAuth = () => {
     throw new Error("GOOGLE_CREDENTIALS environment variable not set");
 };
 
-let auth: GoogleAuth;
-try {
-    auth = getGoogleAuth();
-} catch (e) {
-    console.error("Google Auth initialization failed:", e);
-    // Create a dummy auth that will fail gracefully
-    auth = new GoogleAuth({
-        scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-    });
-}
-
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { prompt, image, mask, strength, seed } = body;
+        const { absType, intensity, image, mask, seed } = body;
 
-        if (!prompt || !image || !mask) {
+        if (!absType || !image || !mask) {
             return NextResponse.json(
-                { error: "Missing required fields: prompt, image, mask" },
+                { error: "Missing required fields: absType, image, mask" },
                 { status: 400 }
             );
         }
+
+        // Resolve prompt and params server-side
+        const prompt = getPromptForAbsType(absType);
+        const negativePrompt = getNegativePrompt(absType);
+        const params = getGenerationParams(absType, intensity);
 
         // Get Project ID and Location from env
         const projectId = process.env.GOOGLE_PROJECT_ID || 'tailwind-452000';
@@ -52,6 +46,18 @@ export async function POST(req: NextRequest) {
             console.error("Missing GOOGLE_PROJECT_ID");
             return NextResponse.json(
                 { error: "Server configuration error: Missing Google Project ID" },
+                { status: 500 }
+            );
+        }
+
+        // Initialize Auth lazily
+        let auth: GoogleAuth;
+        try {
+            auth = getGoogleAuth();
+        } catch (e) {
+            console.error("Google Auth initialization failed:", e);
+            return NextResponse.json(
+                { error: "Server configuration error: Google Auth failed" },
                 { status: 500 }
             );
         }
@@ -98,8 +104,8 @@ export async function POST(req: NextRequest) {
             parameters: {
                 sampleCount: 1,
                 aspectRatio: "1:1",
-                negativePrompt: "blurry, low quality, distorted, unrealistic, cartoon, anime, fake",
-                guidanceScale: 15,
+                negativePrompt: negativePrompt || "blurry, low quality, distorted, unrealistic, cartoon, anime, fake",
+                guidanceScale: params.guidance_scale,
                 seed: seed || Math.floor(Math.random() * 1000000),
                 // Add safety settings to allow fitness/body photos
                 safetyFilterLevel: "BLOCK_ONLY_HIGH",

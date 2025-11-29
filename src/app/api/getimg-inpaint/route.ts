@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPromptForAbsType, getNegativePrompt, getGenerationParams } from "@/lib/prompts";
 
 export async function POST(req: NextRequest) {
     try {
@@ -11,14 +12,19 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { prompt, image, mask, strength, negative_prompt, seed, width, height } = body;
+        const { absType, intensity, image, mask, seed, width, height } = body;
 
-        if (!prompt || !image || !mask) {
+        if (!absType || !image || !mask) {
             return NextResponse.json(
-                { error: "Missing required fields: prompt, image, mask" },
+                { error: "Missing required fields: absType, image, mask" },
                 { status: 400 }
             );
         }
+
+        // Resolve prompt and params server-side
+        const prompt = getPromptForAbsType(absType);
+        const negativePrompt = getNegativePrompt(absType);
+        const params = getGenerationParams(absType, intensity);
 
         // Clean base64 strings (remove data:image/png;base64, prefix if present)
         const cleanImage = image.replace(/^data:image\/\w+;base64,/, "");
@@ -45,9 +51,9 @@ export async function POST(req: NextRequest) {
                 prompt,
                 image: cleanImage,
                 mask_image: cleanMask,
-                strength: strength || 0.75,
-                steps: 25,
-                guidance: 7.5,
+                strength: params.strength || 0.75,
+                steps: params.num_inference_steps || 25,
+                guidance: params.guidance_scale || 7.5,
                 seed: seed,
                 width: safeWidth,
                 height: safeHeight,
