@@ -42,7 +42,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="py-8 border-t border-brand-medium text-center text-brand-light text-sm bg-brand-darkest">
-        © {new Date().getFullYear()} ABS.AI. All rights reserved.
+        © {new Date().getFullYear()} ABS.AI. All rights reserved. Tailwind inc.
       </footer>
     </div>
   );
