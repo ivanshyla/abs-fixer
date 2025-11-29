@@ -200,6 +200,22 @@ export default function CanvasEditor({
                     <span className="text-sm text-gray-600 w-8">{brushSize}</span>
                 </div>
                 <button
+                    onClick={() => {
+                        const canvas = maskCanvasRef.current;
+                        if (!canvas) return;
+                        const ctx = canvas.getContext("2d");
+                        if (!ctx) return;
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        const maskImg = new window.Image();
+                        maskImg.onload = () => onMaskChange(maskImg);
+                        maskImg.src = canvas.toDataURL();
+                    }}
+                    className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold hover:bg-blue-200 transition-colors text-sm sm:text-base"
+                >
+                    Select All (Full Body)
+                </button>
+                <button
                     onClick={clearMask}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-sm sm:text-base"
                 >

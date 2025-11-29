@@ -116,6 +116,33 @@ export default function ResultView({
                 </div>
             </div>
 
+            {/* Try Other Styles */}
+            <div className="mb-8 p-6 bg-brand-medium/20 rounded-xl border border-brand-medium/50">
+                <p className="mb-4 font-semibold text-brand-light">Try a different style?</p>
+                <div className="flex flex-wrap justify-center gap-3">
+                    {[
+                        { id: 'natural_fit', label: 'Natural Fit' },
+                        { id: 'athletic', label: 'Athletic' },
+                        { id: 'defined', label: 'Defined' },
+                        { id: 'weight_loss_5', label: '-5 kg' },
+                        { id: 'weight_loss_10', label: '-10 kg' },
+                        { id: 'ozempic', label: 'Ozempic' },
+                    ].map((style) => (
+                        <button
+                            key={style.id}
+                            onClick={() => onRegenerate(style.id)}
+                            disabled={currentStyle === style.id}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentStyle === style.id
+                                ? 'bg-brand-medium text-brand-light cursor-default'
+                                : 'bg-brand-dark border border-brand-light text-brand-lighter hover:border-white hover:text-white shadow-sm'
+                                }`}
+                        >
+                            {style.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="flex justify-center gap-4">
                 <button
                     onClick={onReset}
