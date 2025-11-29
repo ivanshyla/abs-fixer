@@ -30,7 +30,7 @@ const generateFingerprint = (): string => {
     return Math.abs(hash).toString(36);
 };
 
-const CREDITS_KEY = 'abs_credits';
+const CREDITS_KEY = 'abs_credits_v2';
 const FINGERPRINT_KEY = 'abs_fingerprint';
 const INITIAL_CREDITS = 0; // No free credits - must pay $1 for 6 credits
 
