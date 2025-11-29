@@ -328,17 +328,17 @@ export default function ImageEditor() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-3xl font-bold text-center mb-8">ABS.ai - Body Enhancer</h1>
+      <h1 className="text-3xl font-bold text-center mb-8 text-white">ABS.ai - Body Enhancer</h1>
 
       {/* Progress Steps (Simple) */}
-      <div className="flex justify-center gap-4 mb-8 text-sm text-gray-500">
-        <span className={step === 'upload' ? 'font-bold text-blue-600' : ''}>1. Upload</span>
+      <div className="flex justify-center gap-4 mb-8 text-sm text-brand-light">
+        <span className={step === 'upload' ? 'font-bold text-brand-lighter' : ''}>1. Upload</span>
         <span>→</span>
-        <span className={step === 'draw' ? 'font-bold text-blue-600' : ''}>2. Edit</span>
+        <span className={step === 'draw' ? 'font-bold text-brand-lighter' : ''}>2. Edit</span>
         <span>→</span>
-        <span className={step === 'pay' ? 'font-bold text-blue-600' : ''}>3. Payment</span>
+        <span className={step === 'pay' ? 'font-bold text-brand-lighter' : ''}>3. Payment</span>
         <span>→</span>
-        <span className={step === 'result' ? 'font-bold text-blue-600' : ''}>4. Result</span>
+        <span className={step === 'result' ? 'font-bold text-brand-lighter' : ''}>4. Result</span>
       </div>
 
       {step === 'upload' && (
@@ -362,10 +362,10 @@ export default function ImageEditor() {
             />
 
             {/* Intensity Slider */}
-            <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+            <div className="mt-6 p-4 bg-brand-dark rounded-lg border border-brand-medium">
               <div className="flex justify-between mb-2">
-                <label className="text-sm font-semibold">Transformation Intensity</label>
-                <span className="text-sm text-gray-500">{intensity}%</span>
+                <label className="text-sm font-semibold text-brand-lighter">Transformation Intensity</label>
+                <span className="text-sm text-brand-light">{intensity}%</span>
               </div>
               <input
                 type="range"
@@ -373,36 +373,36 @@ export default function ImageEditor() {
                 max="100"
                 value={intensity}
                 onChange={(e) => setIntensity(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                className="w-full h-2 bg-brand-medium rounded-lg appearance-none cursor-pointer accent-brand-lighter"
               />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="flex justify-between text-xs text-brand-light mt-1">
                 <span>Subtle</span>
                 <span>Balanced</span>
                 <span>Strong</span>
               </div>
             </div>
 
-            <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-8 p-4 bg-brand-dark rounded-lg border border-brand-medium">
               <div className="mb-4">
-                <label className="block text-sm font-semibold mb-2">Email Address</label>
+                <label className="block text-sm font-semibold mb-2 text-brand-lighter">Email Address</label>
                 <input
                   type="email"
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border border-brand-medium rounded-lg bg-brand-darkest text-white placeholder-brand-light focus:border-brand-lighter focus:ring-1 focus:ring-brand-lighter outline-none"
                 />
               </div>
 
               {error && (
-                <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                <div className="mb-4 p-4 bg-red-900/20 border-l-4 border-red-500 rounded-lg">
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
                       <span className="text-2xl">⚠️</span>
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-semibold text-red-800 mb-1">Error</h3>
-                      <p className="text-sm text-red-700">{error}</p>
+                      <h3 className="text-sm font-semibold text-red-400 mb-1">Error</h3>
+                      <p className="text-sm text-red-300">{error}</p>
                     </div>
                   </div>
                 </div>
@@ -410,51 +410,51 @@ export default function ImageEditor() {
 
               {credits > 0 ? (
                 <div className="mb-4">
-                  <div className="text-sm font-bold text-green-600 mb-2">
+                  <div className="text-sm font-bold text-green-400 mb-2">
                     Credits Remaining: {credits}
                   </div>
                   <button
                     onClick={handleCreditGeneration}
                     disabled={loading || !maskImage}
-                    className="w-full py-3 rounded-lg font-bold bg-green-600 text-white hover:bg-green-700 shadow-md"
+                    className="w-full py-3 rounded-lg font-bold bg-green-600 text-white hover:bg-green-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Generating...' : 'Generate Image (1 Credit)'}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5 shadow-sm">
+                  <div className="bg-gradient-to-br from-brand-medium to-brand-dark border border-brand-light rounded-xl p-5 shadow-sm">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Pay to Generate</div>
-                        <div className="text-3xl font-bold text-gray-900">$1.00</div>
+                        <div className="text-xs font-semibold text-brand-lighter uppercase tracking-wide mb-1">Pay to Generate</div>
+                        <div className="text-3xl font-bold text-white">$1.00</div>
                       </div>
                       <button
                         onClick={() => setShowPricingModal(true)}
-                        className="w-8 h-8 rounded-full bg-blue-500 text-white hover:bg-blue-600 flex items-center justify-center font-bold shadow-md transition-all hover:scale-105"
+                        className="w-8 h-8 rounded-full bg-brand-light text-white hover:bg-brand-lighter flex items-center justify-center font-bold shadow-md transition-all hover:scale-105"
                         title="Why $1? See breakdown"
                       >
                         ?
                       </button>
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-700">
-                        <span className="text-green-500 mr-2">✓</span>
+                      <div className="flex items-center text-sm text-brand-lighter">
+                        <span className="text-green-400 mr-2">✓</span>
                         <span><strong>6 credits</strong> = 6 AI generations</span>
                       </div>
-                      <div className="flex items-center text-sm text-gray-700">
-                        <span className="text-green-500 mr-2">✓</span>
+                      <div className="flex items-center text-sm text-brand-lighter">
+                        <span className="text-green-400 mr-2">✓</span>
                         <span>No subscription, no hidden fees</span>
                       </div>
-                      <div className="flex items-center text-sm text-gray-700">
-                        <span className="text-green-500 mr-2">✓</span>
+                      <div className="flex items-center text-sm text-brand-lighter">
+                        <span className="text-green-400 mr-2">✓</span>
                         <span>Try all 3 AI providers</span>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-blue-200">
+                    <div className="mt-3 pt-3 border-t border-brand-light">
                       <button
                         onClick={() => setShowPricingModal(true)}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium underline"
+                        className="text-xs text-brand-lighter hover:text-white font-medium underline"
                       >
                         See full cost breakdown →
                       </button>
@@ -464,8 +464,8 @@ export default function ImageEditor() {
                     onClick={handleProceedToPayment}
                     disabled={loading || !maskImage || !userEmail}
                     className={`w-full py-3 rounded-lg font-bold transition-all ${maskImage && userEmail
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      ? 'bg-brand-lighter text-brand-darkest hover:bg-white shadow-md'
+                      : 'bg-brand-medium text-brand-light cursor-not-allowed'
                       }`}
                   >
                     Proceed to Payment ($1.00)
@@ -475,12 +475,10 @@ export default function ImageEditor() {
 
               {/* Step Hint */}
               {(!maskImage || !userEmail) && (
-                <div className="mt-3 text-xs text-center text-orange-400 bg-orange-900/20 p-2 rounded border border-orange-800/50">
+                <div className="mt-3 text-xs text-center text-orange-300 bg-orange-900/20 p-2 rounded border border-orange-800/50">
                   {!maskImage ? 'Please paint over your abs first' : 'Please enter your email'}
                 </div>
               )}
-
-              {/* Dev Bypass Button - REMOVED FOR PRODUCTION */}
             </div>
           </div>
         </div>
@@ -489,7 +487,7 @@ export default function ImageEditor() {
       {step === 'pay' && clientSecret && (
         <div className="max-w-md mx-auto">
           {stripePromise ? (
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#253745' } } }}>
+            <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#9BA8AB', colorBackground: '#11212D', colorText: '#CCD0CF' } } }}>
               <PaymentForm
                 onSuccess={handleGenerateAfterPayment}
                 onError={setError}
