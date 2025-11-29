@@ -111,9 +111,9 @@ export default function ImageEditor() {
 
   const getPromptForAbsType = (absType: string) => {
     const prompts: Record<string, string> = {
-      natural_fit: 'Subtly enhance the abdominal area with natural, soft muscle definition. Add gentle muscle tone that looks achievable and realistic for an average person. Keep skin texture natural with slight shadows for depth. Maintain realistic proportions and body fat percentage (15-18%). The result should look like someone who exercises regularly but not professionally. Preserve natural lighting and skin imperfections.',
-      athletic: 'Add moderate abdominal definition with visible but not extreme muscle separation. Create an athletic, toned look similar to a recreational athlete or fitness enthusiast. Show clear muscle lines but keep them soft and natural. Maintain realistic skin texture with natural shadows. Body fat around 12-15%. Should look fit and healthy, not overly sculpted.',
-      defined: 'Create well-defined abdominal muscles with clear separation and visible cuts. Add strong muscle definition while maintaining natural proportions. Show athletic conditioning with body fat around 10-12%. Keep skin texture realistic with natural shadows and highlights. The result should look like a dedicated athlete or fitness model, but still human and achievable.',
+      natural_fit: 'Subtly enhance the abdominal area with very soft, natural muscle definition. Focus on realistic skin texture, pores, and natural lighting. Avoid plastic or shiny skin. Add gentle shadows to suggest muscle tone without extreme definition. The result should look like an average fit person with 18-20% body fat. Maintain all original skin imperfections and lighting conditions.',
+      athletic: 'Create visible but natural abdominal muscles. Focus on realistic anatomy and skin texture. Avoid hyper-realistic or cartoonish definition. The abs should look like a result of regular gym training, not bodybuilding. Body fat around 12-15%. Ensure the skin looks organic with natural subsurface scattering and texture. Match the lighting of the original photo perfectly.',
+      defined: 'Add well-defined abdominal muscles with clear separation, but keep the skin texture 100% realistic. Avoid the "shrink-wrapped" look. The muscles should look functional and strong. Body fat around 10-12%. Emphasize natural skin details, veins, and texture to prevent a plastic appearance. The result should look like a fitness enthusiast, not a CGI character.',
     };
     return prompts[absType] || prompts.natural_fit;
   };
