@@ -32,7 +32,7 @@ const generateFingerprint = (): string => {
 
 const CREDITS_KEY = 'abs_credits';
 const FINGERPRINT_KEY = 'abs_fingerprint';
-const INITIAL_CREDITS = 6;
+const INITIAL_CREDITS = 0; // No free credits - must pay $1 for 6 credits
 
 export const useCredits = () => {
     const [credits, setCredits] = useState<number>(INITIAL_CREDITS);

@@ -356,7 +356,7 @@ export default function ImageEditor() {
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5 shadow-sm">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">One-Time Purchase</div>
+                        <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Pay to Generate</div>
                         <div className="text-3xl font-bold text-gray-900">$1.00</div>
                       </div>
                       <button
