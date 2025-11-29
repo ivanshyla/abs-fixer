@@ -17,9 +17,20 @@ export async function POST(req: NextRequest) {
       strength,
       seed,
       paymentId,
+      provider,
     } = await req.json();
 
     const generationId = uuidv4();
+    const createdAt = new Date().toISOString();
+
+    const generationParams = {
+      prompt: promptUsed,
+      strength,
+      seed,
+      provider: provider || modelUsed,
+      absType,
+    };
+
     const generation = {
       id: generationId,
       user_id: userId || 'anonymous',
@@ -34,7 +45,12 @@ export async function POST(req: NextRequest) {
       seed: seed || null,
       payment_id: paymentId || null,
       user_rating: 0,
-      created_at: new Date().toISOString(),
+      created_at: createdAt,
+      // New feedback fields
+      feedback: null,
+      feedbackTimestamp: null,
+      generationParams,
+      imageMetadata: null,
     };
 
     // Credit Deduction Logic
@@ -70,9 +86,28 @@ export async function POST(req: NextRequest) {
       }));
     }
 
+    // Save to generations table
     await dynamo.send(new PutCommand({
       TableName: TABLE_NAMES.GENERATIONS,
       Item: generation
+    }));
+
+    // Save to training data table for ML dataset
+    await dynamo.send(new PutCommand({
+      TableName: TABLE_NAMES.TRAINING_DATA,
+      Item: {
+        id: generationId,
+        inputImageUrl: inputImageUrl || null,
+        maskUrl: maskImageUrl || null,
+        outputImageUrl,
+        prompt: promptUsed,
+        strength,
+        seed,
+        provider: provider || modelUsed,
+        absType,
+        feedback: null,
+        createdAt,
+      }
     }));
 
     return NextResponse.json({ success: true, generation });

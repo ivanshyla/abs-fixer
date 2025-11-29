@@ -15,4 +15,5 @@ export const TABLE_NAMES = {
     USERS: "abs_fixer_users",
     GENERATIONS: "abs_fixer_generations",
     PAYMENTS: "abs_fixer_payments",
+    TRAINING_DATA: "generation_training_data",
 };

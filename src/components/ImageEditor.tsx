@@ -240,19 +240,21 @@ export default function ImageEditor() {
     if (!generationId) return;
 
     try {
-      await fetch('/api/rate-generation', {
+      const feedback = rating === 1 ? 'like' : 'dislike';
+
+      await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           generationId,
-          rating,
+          feedback,
         }),
       });
 
       setUserRating(rating);
       setFeedbackGiven(true);
     } catch (err) {
-      console.error('Rating failed:', err);
+      console.error('Feedback submission failed:', err);
     }
   };
 
@@ -477,6 +479,7 @@ export default function ImageEditor() {
           onRate={handleRating}
           onRegenerate={handleRegenerate}
           currentStyle={selectedAbsType}
+          generationId={generationId}
           onReset={() => {
             setStep('upload');
             setImageEl(null);

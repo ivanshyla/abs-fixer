@@ -9,6 +9,7 @@ interface ResultViewProps {
     onReset: () => void;
     onRegenerate: (style: string) => void;
     currentStyle: string;
+    generationId?: string; // NEW: for feedback tracking
 }
 
 export default function ResultView({
