@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as fal from "@fal-ai/serverless-client";
 import { getPromptForAbsType, getNegativePrompt, getGenerationParams } from "@/lib/prompts";
+
+fal.config({
+    credentials: process.env.FAL_KEY || process.env.FAL_AI_API_KEY,
+});
+
+const uploadResultImage = async (base64: string) => {
+    const buffer = Buffer.from(base64, "base64");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return fal.storage.upload(buffer as any);
+};
 
 export async function POST(req: NextRequest) {
     try {
@@ -71,8 +82,9 @@ export async function POST(req: NextRequest) {
         const data = await response.json();
 
         if (data.image) {
+            const hostedUrl = await uploadResultImage(data.image);
             return NextResponse.json({
-                image: `data:image/jpeg;base64,${data.image}`,
+                image: hostedUrl,
                 model_used: "GetImg.ai SDXL"
             });
         } else {

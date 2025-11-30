@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
+import * as fal from "@fal-ai/serverless-client";
 import { getPromptForAbsType, getNegativePrompt, getGenerationParams } from "@/lib/prompts";
+fal.config({
+    credentials: process.env.FAL_KEY || process.env.FAL_AI_API_KEY,
+});
+
+const uploadResultImage = async (base64: string) => {
+    const buffer = Buffer.from(base64, "base64");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return fal.storage.upload(buffer as any);
+};
 
 // Initialize Google Auth with explicit credentials
 const getGoogleAuth = () => {
@@ -136,8 +146,7 @@ export async function POST(req: NextRequest) {
         }
 
         const outputBase64 = data.predictions[0].bytesBase64Encoded;
-        const outputMimeType = data.predictions[0].mimeType || "image/png";
-        const outputImageUrl = `data:${outputMimeType};base64,${outputBase64}`;
+        const outputImageUrl = await uploadResultImage(outputBase64);
 
         return NextResponse.json({
             image: outputImageUrl,
