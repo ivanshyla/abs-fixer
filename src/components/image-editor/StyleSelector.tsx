@@ -19,106 +19,94 @@ export const TRANSFORMATION_CATEGORIES = {
     ]
 };
 
+const cardBase =
+    "rounded-2xl border border-white/5 bg-white/5 p-4 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60";
+
 interface StyleSelectorProps {
     selectedType: string;
     onSelect: (type: string) => void;
 }
 
+const CategoryHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
+    <div className="mb-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-white/50">{subtitle}</p>
+        <h3 className="text-lg font-semibold text-white">{title}</h3>
+    </div>
+);
+
+const TransformationCard = ({
+    style,
+    selected,
+    onSelect,
+    className = "",
+}: {
+    style: { id: string; label: string; description: string };
+    selected: boolean;
+    onSelect: () => void;
+    className?: string;
+}) => (
+    <button
+        onClick={onSelect}
+        className={`${cardBase} ${selected ? "bg-white text-brand-dark shadow-lg" : "hover:bg-white/10 text-white"} ${className}`}
+    >
+        <div className="flex items-start justify-between gap-3">
+            <div>
+                <div className="text-base font-semibold">{style.label}</div>
+                <p className={`mt-1 text-sm ${selected ? "text-brand-dark/70" : "text-white/60"}`}>
+                    {style.description}
+                </p>
+            </div>
+            {selected && <span className="text-sm font-semibold text-brand-dark">Selected</span>}
+        </div>
+    </button>
+);
+
 export default function StyleSelector({ selectedType, onSelect }: StyleSelectorProps) {
     return (
         <div className="mb-6 space-y-6">
-            {/* Abs Section */}
-            <div>
-                <h3 className="text-sm font-bold text-brand-lighter mb-3 flex items-center gap-2">
-                    Abs Enhancement
-                </h3>
-                <div className="grid grid-cols-1 gap-2">
+            <section>
+                <CategoryHeader title="Abs Enhancement" subtitle="Core definition" />
+                <div className="grid grid-cols-1 gap-3">
                     {TRANSFORMATION_CATEGORIES.abs.map((style) => (
-                        <button
+                        <TransformationCard
                             key={style.id}
-                            onClick={() => onSelect(style.id)}
-                            className={`w-full p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${selectedType === style.id
-                                ? 'bg-brand-medium border-brand-lighter ring-1 ring-brand-lighter'
-                                : 'bg-brand-dark border-brand-medium hover:border-brand-light hover:bg-brand-medium/50'
-                                }`}
-                        >
-                            <div className="flex-1">
-                                <div className={`font-semibold ${selectedType === style.id ? 'text-white' : 'text-brand-lighter'}`}>
-                                    {style.label}
-                                </div>
-                                <div className="text-xs text-brand-light">
-                                    {style.description}
-                                </div>
-                            </div>
-                            {selectedType === style.id && (
-                                <div className="text-brand-lighter font-bold text-sm">✓</div>
-                            )}
-                        </button>
+                            style={style}
+                            selected={selectedType === style.id}
+                            onSelect={() => onSelect(style.id)}
+                        />
                     ))}
                 </div>
-            </div>
+            </section>
 
-            {/* Weight Loss Section */}
-            <div>
-                <h3 className="text-sm font-bold text-brand-lighter mb-3 flex items-center gap-2">
-                    <span className="text-xl">⚖️</span> Weight Loss
-                </h3>
-                <div className="grid grid-cols-1 gap-2">
+            <section>
+                <CategoryHeader title="Weight Loss" subtitle="Sculpt & slim" />
+                <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] snap-x snap-mandatory">
                     {TRANSFORMATION_CATEGORIES.weightLoss.map((style) => (
-                        <button
+                        <TransformationCard
                             key={style.id}
-                            onClick={() => onSelect(style.id)}
-                            className={`w-full p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${selectedType === style.id
-                                ? 'bg-brand-medium border-brand-lighter ring-1 ring-brand-lighter'
-                                : 'bg-brand-dark border-brand-medium hover:border-brand-light hover:bg-brand-medium/50'
-                                }`}
-                        >
-                            <div className="flex-1">
-                                <div className={`font-semibold ${selectedType === style.id ? 'text-white' : 'text-brand-lighter'}`}>
-                                    {style.label}
-                                </div>
-                                <div className="text-xs text-brand-light">
-                                    {style.description}
-                                </div>
-                            </div>
-                            {selectedType === style.id && (
-                                <div className="text-brand-lighter font-bold text-sm">✓</div>
-                            )}
-                        </button>
+                            style={style}
+                            selected={selectedType === style.id}
+                            onSelect={() => onSelect(style.id)}
+                            className="min-w-[220px] snap-start"
+                        />
                     ))}
                 </div>
-            </div>
+            </section>
 
-            {/* Training Journeys */}
-            <div>
-                <h3 className="text-sm font-bold text-brand-lighter mb-3 flex items-center gap-2">
-                    <span className="text-xl">🏃‍♀️</span> Training Journeys
-                </h3>
-                <div className="grid grid-cols-1 gap-2">
+            <section>
+                <CategoryHeader title="Training Journeys" subtitle="6 month programs" />
+                <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] snap-x snap-mandatory">
                     {TRANSFORMATION_CATEGORIES.training.map((style) => (
-                        <button
+                        <TransformationCard
                             key={style.id}
-                            onClick={() => onSelect(style.id)}
-                            className={`w-full p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${selectedType === style.id
-                                ? 'bg-brand-medium border-brand-lighter ring-1 ring-brand-lighter'
-                                : 'bg-brand-dark border-brand-medium hover:border-brand-light hover:bg-brand-medium/50'
-                                }`}
-                        >
-                            <div className="flex-1">
-                                <div className={`font-semibold ${selectedType === style.id ? 'text-white' : 'text-brand-lighter'}`}>
-                                    {style.label}
-                                </div>
-                                <div className="text-xs text-brand-light">
-                                    {style.description}
-                                </div>
-                            </div>
-                            {selectedType === style.id && (
-                                <div className="text-brand-lighter font-bold text-sm">✓</div>
-                            )}
-                        </button>
+                            style={style}
+                            selected={selectedType === style.id}
+                            onSelect={() => onSelect(style.id)}
+                            className="min-w-[220px] snap-start"
+                        />
                     ))}
                 </div>
-            </div>
+            </section>
         </div>
     );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
+import { ensureServerEnv } from '@/lib/runtime';
 import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,6 +9,7 @@ const PRICE_IN_CENTS = 100; // $1.00 per generation
 
 export async function POST(req: NextRequest) {
   try {
+    ensureServerEnv();
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('STRIPE_SECRET_KEY is not configured');
     }

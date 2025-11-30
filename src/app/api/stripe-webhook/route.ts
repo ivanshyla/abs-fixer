@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
+import { ensureServerEnv } from '@/lib/runtime';
 import { ScanCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 export async function POST(req: NextRequest) {
   try {
+    ensureServerEnv();
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
       throw new Error('Stripe keys not configured');
     }

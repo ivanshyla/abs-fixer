@@ -4,6 +4,36 @@ frontend:
     preBuild:
       commands:
         - npm ci
+        - echo "Fetching runtime secrets from SSM..."
+        - export DEPLOY_REGION=${APP_AWS_REGION:-${AWS_REGION:-eu-north-1}}
+        - APP_AWS_ACCESS_KEY_ID_VALUE=$(aws ssm get-parameter --with-decryption --name "/absai/APP_AWS_ACCESS_KEY_ID" --query 'Parameter.Value' --output text --region $DEPLOY_REGION)
+        - APP_AWS_SECRET_ACCESS_KEY_VALUE=$(aws ssm get-parameter --with-decryption --name "/absai/APP_AWS_SECRET_ACCESS_KEY" --query 'Parameter.Value' --output text --region $DEPLOY_REGION)
+        - APP_AWS_REGION_VALUE=$(aws ssm get-parameter --with-decryption --name "/absai/APP_AWS_REGION" --query 'Parameter.Value' --output text --region $DEPLOY_REGION)
+        - STRIPE_SECRET_KEY_VALUE=$(aws ssm get-parameter --with-decryption --name "/absai/STRIPE_SECRET_KEY" --query 'Parameter.Value' --output text --region $DEPLOY_REGION)
+        - STRIPE_PUBLISHABLE_KEY_VALUE=$(aws ssm get-parameter --with-decryption --name "/absai/NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" --query 'Parameter.Value' --output text --region $DEPLOY_REGION)
+        - STRIPE_WEBHOOK_SECRET_VALUE=$(aws ssm get-parameter --with-decryption --name "/absai/STRIPE_WEBHOOK_SECRET" --query 'Parameter.Value' --output text --region $DEPLOY_REGION)
+        - |
+          cat <<EOF > src/runtime/secrets.generated.ts
+          export const runtimeSecrets = {
+              APP_AWS_ACCESS_KEY_ID: "$APP_AWS_ACCESS_KEY_ID_VALUE",
+              APP_AWS_SECRET_ACCESS_KEY: "$APP_AWS_SECRET_ACCESS_KEY_VALUE",
+              APP_AWS_REGION: "$APP_AWS_REGION_VALUE",
+              STRIPE_SECRET_KEY: "$STRIPE_SECRET_KEY_VALUE",
+              NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "$STRIPE_PUBLISHABLE_KEY_VALUE",
+              STRIPE_WEBHOOK_SECRET: "$STRIPE_WEBHOOK_SECRET_VALUE"
+          } as const;
+          EOF
+        - echo "Runtime secrets file generated."
+        - |
+          cat <<EOF > .env.production.local
+          APP_AWS_ACCESS_KEY_ID=$APP_AWS_ACCESS_KEY_ID_VALUE
+          APP_AWS_SECRET_ACCESS_KEY=$APP_AWS_SECRET_ACCESS_KEY_VALUE
+          APP_AWS_REGION=$APP_AWS_REGION_VALUE
+          STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY_VALUE
+          STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET_VALUE
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY_VALUE
+          EOF
+        - echo ".env.production.local created for Next build."
     build:
       commands:
         - npm run build

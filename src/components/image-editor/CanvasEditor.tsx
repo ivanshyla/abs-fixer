@@ -139,17 +139,17 @@ export default function CanvasEditor({
     return (
         <div>
             {/* Canvas */}
-            <div className="mb-2 flex justify-between items-end">
-                <p className="text-sm font-medium text-gray-700">
-                    Paint over the area you want to enhance (your abs)
+            <div className="mb-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1">
+                <p className="text-sm font-semibold text-gray-100">
+                    Paint over the area to enhance
                 </p>
-                <p className="text-xs text-gray-500">
-                    Use the tools below to adjust the mask
+                <p className="text-xs text-gray-400">
+                    Brush to add, eraser to remove
                 </p>
             </div>
             <div ref={containerRef} className="mb-4">
                 <div
-                    className="bg-brand-dark rounded-lg border-2 border-dashed border-brand-light mx-auto"
+                    className="bg-brand-dark rounded-xl border border-dashed border-brand-light/80 mx-auto shadow-inner"
                     style={{
                         width: `${stageWidth}px`,
                         height: `${stageHeight}px`,
@@ -179,59 +179,67 @@ export default function CanvasEditor({
             </div>
 
             {/* Controls */}
-            <div className="flex flex-wrap gap-2 mb-4">
-                <button
-                    onClick={() => setMode('brush')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${mode === 'brush'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            <div className="mb-4 space-y-2 rounded-2xl border border-white/5 bg-white/5 p-3 backdrop-blur">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                    <button
+                        onClick={() => setMode("brush")}
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                            mode === "brush"
+                                ? "bg-white text-brand-dark shadow"
+                                : "bg-white/10 text-white hover:bg-white/20"
                         }`}
-                >
-                    Brush
-                </button>
-                <button
-                    onClick={() => setMode('erase')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${mode === 'erase'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    >
+                        Brush
+                    </button>
+                    <button
+                        onClick={() => setMode("erase")}
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                            mode === "erase"
+                                ? "bg-white text-brand-dark shadow"
+                                : "bg-white/10 text-white hover:bg-white/20"
                         }`}
-                >
-                    Eraser
-                </button>
-                <div className="flex items-center gap-2 flex-1 min-w-[120px]">
-                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Size:</label>
-                    <input
-                        type="range"
-                        min="20"
-                        max="80"
-                        value={brushSize}
-                        onChange={(e) => setBrushSize(Number(e.target.value))}
-                        className="flex-1"
-                    />
-                    <span className="text-sm text-gray-600 w-8">{brushSize}</span>
+                    >
+                        Eraser
+                    </button>
+                    <button
+                        onClick={() => {
+                            const canvas = maskCanvasRef.current;
+                            if (!canvas) return;
+                            const ctx = canvas.getContext("2d");
+                            if (!ctx) return;
+                            ctx.fillStyle = "white";
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            const maskImg = new window.Image();
+                            maskImg.onload = () => onMaskChange(maskImg);
+                            maskImg.src = canvas.toDataURL();
+                        }}
+                        className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors bg-white/10 hover:bg-white/20"
+                    >
+                        Select full body
+                    </button>
+                    <button
+                        onClick={clearMask}
+                        className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors bg-white/10 hover:bg-white/20"
+                    >
+                        Clear
+                    </button>
                 </div>
-                <button
-                    onClick={() => {
-                        const canvas = maskCanvasRef.current;
-                        if (!canvas) return;
-                        const ctx = canvas.getContext("2d");
-                        if (!ctx) return;
-                        ctx.fillStyle = "white";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        const maskImg = new window.Image();
-                        maskImg.onload = () => onMaskChange(maskImg);
-                        maskImg.src = canvas.toDataURL();
-                    }}
-                    className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold hover:bg-blue-200 transition-colors text-sm sm:text-base"
-                >
-                    Select All (Full Body)
-                </button>
-                <button
-                    onClick={clearMask}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-sm sm:text-base"
-                >
-                    Clear
-                </button>
+                <div className="flex flex-col gap-2 rounded-xl bg-brand-dark/60 p-3 text-white sm:flex-row sm:items-center">
+                    <div className="text-xs uppercase tracking-wide text-white/70">
+                        Brush size
+                    </div>
+                    <div className="flex flex-1 items-center gap-3">
+                        <input
+                            type="range"
+                            min="20"
+                            max="80"
+                            value={brushSize}
+                            onChange={(e) => setBrushSize(Number(e.target.value))}
+                            className="flex-1 accent-white"
+                        />
+                        <span className="w-10 text-right text-sm font-semibold">{brushSize}</span>
+                    </div>
+                </div>
             </div>
         </div>
     );
