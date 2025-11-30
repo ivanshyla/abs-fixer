@@ -11,6 +11,11 @@ export const TRANSFORMATION_CATEGORIES = {
         { id: 'weight_loss_5', label: '-5 kg (Beta)', description: 'Toned, slimmer look' },
         { id: 'weight_loss_10', label: '-10 kg (Beta)', description: 'Significant change' },
         { id: 'ozempic', label: 'Ozempic Effect (Beta)', description: 'Rapid weight loss look' },
+    ],
+    training: [
+        { id: 'six_months_running', label: '6 Months Running', description: 'Endurance athlete vibe' },
+        { id: 'six_months_climbing', label: '6 Months Climbing', description: 'Functional climber muscle' },
+        { id: 'six_months_gym', label: '6 Months Gym', description: 'Balanced hypertrophy look' },
     ]
 };
 
@@ -60,6 +65,37 @@ export default function StyleSelector({ selectedType, onSelect }: StyleSelectorP
                 </h3>
                 <div className="grid grid-cols-1 gap-2">
                     {TRANSFORMATION_CATEGORIES.weightLoss.map((style) => (
+                        <button
+                            key={style.id}
+                            onClick={() => onSelect(style.id)}
+                            className={`w-full p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${selectedType === style.id
+                                ? 'bg-brand-medium border-brand-lighter ring-1 ring-brand-lighter'
+                                : 'bg-brand-dark border-brand-medium hover:border-brand-light hover:bg-brand-medium/50'
+                                }`}
+                        >
+                            <div className="flex-1">
+                                <div className={`font-semibold ${selectedType === style.id ? 'text-white' : 'text-brand-lighter'}`}>
+                                    {style.label}
+                                </div>
+                                <div className="text-xs text-brand-light">
+                                    {style.description}
+                                </div>
+                            </div>
+                            {selectedType === style.id && (
+                                <div className="text-brand-lighter font-bold text-sm">✓</div>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Training Journeys */}
+            <div>
+                <h3 className="text-sm font-bold text-brand-lighter mb-3 flex items-center gap-2">
+                    <span className="text-xl">🏃‍♀️</span> Training Journeys
+                </h3>
+                <div className="grid grid-cols-1 gap-2">
+                    {TRANSFORMATION_CATEGORIES.training.map((style) => (
                         <button
                             key={style.id}
                             onClick={() => onSelect(style.id)}

@@ -39,7 +39,25 @@ export const getPromptForAbsType = (absType: string) => {
 - Skin texture shows signs of volume depletion
 - Same person, same pose, photorealistic, clinical accuracy
 - Do NOT add fitness or muscle tone - this is medication-based weight loss
-- Preserve or slightly emphasize nasolabial folds and under-eye area`
+- Preserve or slightly emphasize nasolabial folds and under-eye area`,
+        six_months_running: `Transform this person to look like they completed six months of steady distance running:
+- Slightly leaner full body, reduced waist/hip fat, subtly defined calves and quads
+- Upright posture with relaxed shoulders and confident stance of an endurance athlete
+- Clothing fits a bit looser but stays identical to original photo
+- Preserve face, hairstyle, lighting, and skin texture exactly
+- Emphasize realistic endurance build, not extreme leanness`,
+        six_months_climbing: `Transform this person to show six months of regular climbing practice:
+- Stronger forearms with tendon definition, grip-ready hands (optional chalk hints)
+- Wider upper back and shoulders with lean, functional muscle
+- Engaged obliques and core stability without exaggerated six-pack
+- Maintain clothing, lighting, skin texture, and environment
+- Keep the subject's identity perfectly intact, photorealistic finish`,
+        six_months_gym: `Transform this person after six months of balanced gym training:
+- Noticeable chest and shoulder development, fuller arms, moderate core definition
+- Legs show proportional strength gains (no skipped leg day)
+- Body fat slightly reduced but still realistic and attainable
+- Preserve original outfit, lighting, and facial features
+- Result should look like a dedicated gym-goer, not a bodybuilder`
     };
     return prompts[absType] || prompts.natural_fit;
 };
