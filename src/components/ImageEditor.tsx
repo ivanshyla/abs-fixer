@@ -22,6 +22,17 @@ const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 type Step = 'upload' | 'draw' | 'pay' | 'result';
 
+const PROVIDERS: Array<{
+  id: 'fal' | 'vertex' | 'getimg';
+  label: string;
+  description: string;
+  eta: string;
+}> = [
+  { id: 'fal', label: 'Fal.ai Flux', description: 'Best blend of quality + speed', eta: '≈ 8s' },
+  { id: 'vertex', label: 'Google Vertex AI', description: 'Strict safety, realistic skin', eta: '≈ 15s' },
+  { id: 'getimg', label: 'GetImg SDXL', description: 'Great for stylized edits', eta: '≈ 12s' },
+];
+
 export default function ImageEditor() {
   const [step, setStep] = useState<Step>('upload');
   const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
@@ -38,13 +49,21 @@ export default function ImageEditor() {
   const [showPricingModal, setShowPricingModal] = useState(false);
 
   // Use new credit system
-  const { credits, loading: creditsLoading, useCredit, hasCredits } = useCredits();
+  const {
+    credits,
+    loading: creditsLoading,
+    hasCredits,
+    registerPayment,
+    refreshCredits,
+    paymentId: storedPaymentId
+  } = useCredits();
 
-  // Load payment ID from local storage
+  // Sync hook payment ID with local component state
   React.useEffect(() => {
-    const savedPaymentId = localStorage.getItem('abs_payment_id');
-    if (savedPaymentId) setPaymentIntentId(savedPaymentId);
-  }, []);
+    if (storedPaymentId) {
+      setPaymentIntentId(storedPaymentId);
+    }
+  }, [storedPaymentId]);
 
   // Payment
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -109,12 +128,27 @@ export default function ImageEditor() {
     }
   };
 
+  const allowDevBypass = process.env.NODE_ENV !== 'production';
+
+  type GenerateOptions = {
+    styleOverride?: string;
+    paymentId?: string | null;
+  };
+
   // Unified generation helper
-  const generateImage = async (styleOverride?: string) => {
+  const generateImage = async (options?: GenerateOptions) => {
     setLoading(true);
     setError(null);
 
-    const styleToUse = styleOverride || selectedAbsType;
+    const styleToUse = options?.styleOverride || selectedAbsType;
+    const effectivePaymentId = options?.paymentId ?? paymentIntentId;
+    const resolvedPaymentId = effectivePaymentId || (allowDevBypass ? 'dev_bypass' : null);
+
+    if (!resolvedPaymentId) {
+      setLoading(false);
+      setError('No credits available. Please complete payment to continue.');
+      return;
+    }
 
     try {
       const imageDataURL = imageEl?.src || '';
@@ -142,6 +176,7 @@ export default function ImageEditor() {
           mask: maskDataURL,
           width,
           height,
+          paymentId: resolvedPaymentId,
         }),
       });
 
@@ -165,7 +200,7 @@ export default function ImageEditor() {
           // strength: ... // No longer available on client
           intensity, // Save intensity instead
           seed: data.seed,
-          paymentId: paymentIntentId || 'dev_bypass',
+          paymentId: resolvedPaymentId,
         }),
       });
 
@@ -188,41 +223,60 @@ export default function ImageEditor() {
   };
 
   // Generate after payment (First time)
-  const handleGenerateAfterPayment = async () => {
-    if (paymentIntentId) localStorage.setItem('abs_payment_id', paymentIntentId);
-    await generateImage();
+  const handleGenerateAfterPayment = async (confirmedPaymentId: string) => {
+    const nextPaymentId = confirmedPaymentId || paymentIntentId;
+
+    if (confirmedPaymentId) {
+      registerPayment(confirmedPaymentId);
+      setPaymentIntentId(confirmedPaymentId);
+    }
+
+    if (!nextPaymentId && !allowDevBypass) {
+      setError('Missing payment confirmation. Please try again.');
+      return;
+    }
+
+    await generateImage({ paymentId: nextPaymentId });
+    await refreshCredits(nextPaymentId);
     setShowSaveWarning(true);
   };
 
-  // Wrapper to handle credit deduction
+  // Wrapper to handle credit generation
   const handleCreditGeneration = async () => {
-    if (hasCredits()) {
-      const success = await useCredit();
-      if (success) {
-        await generateImage();
-        setShowSaveWarning(true);
-      } else {
-        setError("Credit limit reached. Please try again later.");
-      }
-    } else {
+    setError(null);
+    if (!paymentIntentId && !allowDevBypass) {
       handleProceedToPayment();
+      return;
     }
+
+    if (!hasCredits() && !allowDevBypass) {
+      setError("No credits remaining. Please purchase more to continue.");
+      return;
+    }
+
+    await generateImage({ paymentId: paymentIntentId });
+    await refreshCredits(paymentIntentId);
+    setShowSaveWarning(true);
   };
 
   // Handle regeneration with new style
   const handleRegenerate = async (style: string) => {
     setSelectedAbsType(style);
-    if (hasCredits()) {
-      const success = await useCredit();
-      if (success) {
-        await generateImage(style);
-        setShowSaveWarning(true);
-      } else {
-        setError("Credit limit reached. Please try again later.");
-      }
-    } else {
-      setError("No credits remaining. Please refresh to pay again.");
+    setError(null);
+
+    if (!paymentIntentId && !allowDevBypass) {
+      setError("Missing payment information. Please pay again.");
+      return;
     }
+
+    if (!hasCredits() && !allowDevBypass) {
+      setError("No credits remaining. Please purchase more to continue.");
+      return;
+    }
+
+    await generateImage({ styleOverride: style, paymentId: paymentIntentId });
+    await refreshCredits(paymentIntentId);
+    setShowSaveWarning(true);
   };
 
   // Rating
@@ -307,6 +361,40 @@ export default function ImageEditor() {
               </div>
             </div>
 
+            {/* Provider Selector */}
+            <div className="mt-6 p-4 bg-brand-dark rounded-lg border border-brand-medium">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-semibold text-brand-lighter">AI Provider</p>
+                  <p className="text-xs text-brand-light">Switch between Fal, Vertex, or GetImg.</p>
+                </div>
+                <span className="text-xs text-brand-light bg-brand-darkest px-2 py-1 rounded-full border border-brand-medium">
+                  Credits cover any provider
+                </span>
+              </div>
+              <div className="space-y-2">
+                {PROVIDERS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setProvider(p.id)}
+                    className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${
+                      provider === p.id
+                        ? 'border-white bg-white/10 text-white shadow-md'
+                        : 'border-brand-medium bg-brand-darkest text-brand-lighter hover:border-brand-light'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">{p.label}</p>
+                        <p className="text-xs text-brand-light">{p.description}</p>
+                      </div>
+                      <span className="text-xs text-brand-light">{p.eta}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-8 p-4 bg-brand-dark rounded-lg border border-brand-medium">
               <div className="mb-4">
                 <label className="block text-sm font-semibold mb-2 text-brand-lighter">Email Address</label>
@@ -333,14 +421,18 @@ export default function ImageEditor() {
                 </div>
               )}
 
-              {credits > 0 ? (
+              {creditsLoading ? (
+                <div className="mb-4 text-center text-brand-lighter">
+                  Checking credits...
+                </div>
+              ) : credits > 0 ? (
                 <div className="mb-4">
                   <div className="text-sm font-bold text-green-400 mb-2">
                     Credits Remaining: {credits}
                   </div>
                   <button
                     onClick={handleCreditGeneration}
-                    disabled={loading || !maskImage}
+                    disabled={loading || creditsLoading || !maskImage}
                     className="w-full py-3 rounded-lg font-bold bg-green-600 text-white hover:bg-green-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Generating...' : 'Generate Image (1 Credit)'}
@@ -395,6 +487,17 @@ export default function ImageEditor() {
                   >
                     Proceed to Payment ($1.00)
                   </button>
+                  {storedPaymentId && !creditsLoading && (
+                    <div className="text-xs text-orange-200 text-center">
+                      Already paid?{" "}
+                      <button
+                        onClick={() => refreshCredits(storedPaymentId)}
+                        className="underline hover:text-white"
+                      >
+                        Refresh credit status
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

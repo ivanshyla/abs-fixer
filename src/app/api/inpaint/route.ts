@@ -1,8 +1,16 @@
 import { NextRequest } from "next/server";
 import Replicate from "replicate";
+import { reserveCredit } from "@/lib/credits";
 
 const token = process.env.REPLICATE_API_TOKEN;
 const replicate = new Replicate({ auth: token ?? "" });
+const allowDevGeneration = process.env.ALLOW_DEV_GENERATION === "true" || process.env.NODE_ENV !== "production";
+const creditErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.name === "ConditionalCheckFailedException") {
+    return "No credits remaining or payment not confirmed yet.";
+  }
+  return error instanceof Error ? error.message : "Unable to use credit";
+};
 
 function dataURLToBlob(dataURL: string): Blob {
   const [header, base64] = dataURL.split(',');
@@ -29,6 +37,7 @@ type InpaintRequest = {
   mask_blur?: number;
   mask_expand?: number;
   seed?: number;
+  paymentId?: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -54,11 +63,28 @@ export async function POST(req: NextRequest) {
       mask_blur: json.mask_blur !== undefined ? Number(json.mask_blur) : undefined,
       mask_expand: json.mask_expand !== undefined ? Number(json.mask_expand) : undefined,
       seed: json.seed !== undefined ? Number(json.seed) : undefined,
+      paymentId: json.paymentId ? String(json.paymentId) : undefined,
     };
 
     const { image, mask, prompt, strength = 0.35, negative_prompt } = body || {};
     if (!image || !mask || !prompt) {
       return new Response(JSON.stringify({ error: "Missing image/mask/prompt" }), { status: 400 });
+    }
+
+    if (!body.paymentId && !allowDevGeneration) {
+      return new Response(JSON.stringify({ error: "Missing paymentId. Please complete payment." }), { status: 403 });
+    }
+
+    if (body.paymentId && body.paymentId !== "dev_bypass") {
+      try {
+        await reserveCredit(body.paymentId);
+      } catch (creditError) {
+        console.error("Credit reservation failed:", creditError);
+        return new Response(
+          JSON.stringify({ error: creditErrorMessage(creditError) }),
+          { status: 402 }
+        );
+      }
     }
 
     console.log("Input validation passed:", { 

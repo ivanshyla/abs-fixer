@@ -1,118 +1,91 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-// Generate browser fingerprint
-const generateFingerprint = (): string => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-        ctx.textBaseline = 'top';
-        ctx.font = '14px Arial';
-        ctx.fillText('fingerprint', 2, 2);
-    }
+const PAYMENT_STORAGE_KEY = 'abs_payment_id';
 
-    const fingerprint = {
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        platform: navigator.platform,
-        screenResolution: `${screen.width}x${screen.height}`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        canvasData: canvas.toDataURL(),
-    };
-
-    // Simple hash function
-    const str = JSON.stringify(fingerprint);
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash).toString(36);
+type CreditsResponse = {
+    hasCredits: boolean;
+    remainingCredits: number;
+    reason?: string | null;
 };
 
-const CREDITS_KEY = 'abs_credits_v2';
-const FINGERPRINT_KEY = 'abs_fingerprint';
-const INITIAL_CREDITS = 0; // No free credits - must pay $1 for 6 credits
+const fetchCredits = async (paymentId: string): Promise<CreditsResponse> => {
+    const response = await fetch('/api/check-credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to load credits');
+    }
+
+    return response.json();
+};
 
 export const useCredits = () => {
-    const [credits, setCredits] = useState<number>(INITIAL_CREDITS);
-    const [fingerprint, setFingerprint] = useState<string>('');
-    const [loading, setLoading] = useState(true);
+    const [credits, setCredits] = useState<number>(0);
+    const [paymentId, setPaymentId] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const hydratePayment = useCallback(async (pid?: string | null) => {
+        const activePaymentId = pid ?? paymentId;
+
+        if (!activePaymentId) {
+            setCredits(0);
+            setLoading(false);
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const data = await fetchCredits(activePaymentId);
+            setCredits(data.hasCredits ? data.remainingCredits : 0);
+            setError(null);
+        } catch (err) {
+            console.error('Failed to load credits:', err);
+            setError(err instanceof Error ? err.message : 'Unknown error');
+            setCredits(0);
+        } finally {
+            setLoading(false);
+        }
+    }, [paymentId]);
 
     useEffect(() => {
-        // Get or create fingerprint
-        let fp = localStorage.getItem(FINGERPRINT_KEY);
-        if (!fp) {
-            fp = generateFingerprint();
-            localStorage.setItem(FINGERPRINT_KEY, fp);
-        }
-        setFingerprint(fp);
+        const storedPaymentId = typeof window !== 'undefined'
+            ? localStorage.getItem(PAYMENT_STORAGE_KEY)
+            : null;
 
-        // Get credits from localStorage
-        const storedCredits = localStorage.getItem(CREDITS_KEY);
-        if (storedCredits) {
-            setCredits(parseInt(storedCredits, 10));
+        if (storedPaymentId) {
+            setPaymentId(storedPaymentId);
+            hydratePayment(storedPaymentId);
         } else {
-            localStorage.setItem(CREDITS_KEY, INITIAL_CREDITS.toString());
+            setLoading(false);
         }
+    }, [hydratePayment]);
 
-        setLoading(false);
+    const registerPayment = useCallback((pid: string) => {
+        localStorage.setItem(PAYMENT_STORAGE_KEY, pid);
+        setPaymentId(pid);
+        hydratePayment(pid);
+    }, [hydratePayment]);
+
+    const clearPayment = useCallback(() => {
+        localStorage.removeItem(PAYMENT_STORAGE_KEY);
+        setPaymentId(null);
+        setCredits(0);
     }, []);
 
-    const checkCreditsOnServer = async (): Promise<boolean> => {
-        try {
-            const response = await fetch('/api/check-credits', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fingerprint }),
-            });
-            const data = await response.json();
-            return data.hasCredits;
-        } catch (error) {
-            console.error('Failed to check credits on server:', error);
-            // Fallback to localStorage if server check fails
-            return credits > 0;
-        }
-    };
-
-    const useCredit = async (): Promise<boolean> => {
-        // Check server-side credits first
-        const hasServerCredits = await checkCreditsOnServer();
-        if (!hasServerCredits) {
-            return false;
-        }
-
-        // Decrement local credits
-        if (credits > 0) {
-            const newCredits = credits - 1;
-            setCredits(newCredits);
-            localStorage.setItem(CREDITS_KEY, newCredits.toString());
-
-            // Notify server
-            try {
-                await fetch('/api/use-credit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fingerprint }),
-                });
-            } catch (error) {
-                console.error('Failed to update server credits:', error);
-            }
-
-            return true;
-        }
-        return false;
-    };
-
-    const hasCredits = (): boolean => {
-        return credits > 0;
-    };
+    const hasCredits = useCallback(() => credits > 0, [credits]);
 
     return {
         credits,
-        fingerprint,
+        paymentId,
         loading,
-        useCredit,
+        error,
         hasCredits,
+        registerPayment,
+        refreshCredits: hydratePayment,
+        clearPayment,
     };
 };
