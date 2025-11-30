@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPromptForAbsType, getNegativePrompt, getGenerationParams } from "@/lib/prompts";
+import { validateImageDataUrl } from "@/lib/imageValidation";
 
 export async function POST(req: NextRequest) {
     try {
@@ -26,9 +27,11 @@ export async function POST(req: NextRequest) {
         const negativePrompt = getNegativePrompt(absType);
         const params = getGenerationParams(absType, intensity);
 
-        // Clean base64 strings (remove data:image/png;base64, prefix if present)
-        const cleanImage = image.replace(/^data:image\/\w+;base64,/, "");
-        const cleanMask = mask.replace(/^data:image\/\w+;base64,/, "");
+        const validatedImage = validateImageDataUrl(image, "image");
+        const validatedMask = validateImageDataUrl(mask, "mask");
+
+        const cleanImage = validatedImage.base64;
+        const cleanMask = validatedMask.base64;
 
         // GetImg.ai API endpoint for SDXL Inpainting
         // Note: flux-pro/inpaint doesn't exist in their API
@@ -49,6 +52,7 @@ export async function POST(req: NextRequest) {
             },
             body: JSON.stringify({
                 prompt,
+                negative_prompt: negativePrompt || undefined,
                 image: cleanImage,
                 mask_image: cleanMask,
                 strength: params.strength || 0.75,

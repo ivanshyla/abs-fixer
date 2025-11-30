@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as fal from "@fal-ai/serverless-client";
 import { getPromptForAbsType, getGenerationParams } from "@/lib/prompts";
+import { validateImageDataUrl } from "@/lib/imageValidation";
 
 // Configure the client with the API key
 fal.config({
@@ -28,26 +29,13 @@ export async function POST(req: NextRequest) {
     // Helper to upload Data URL to Fal Storage
     const uploadToFal = async (dataUrl: string, label: string) => {
       try {
-        console.log(`Processing ${label} (Length: ${dataUrl?.length})`);
-
-        // Parse Data URL manually to avoid fetch() issues in Node
-        const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (!matches || matches.length !== 3) {
-          console.error(`Invalid Data URL format for ${label}. Start: ${dataUrl?.substring(0, 50)}...`);
-          throw new Error(`Invalid Data URL format for ${label}`);
-        }
-
-        const contentType = matches[1];
-        const b64Data = matches[2];
-        console.log(`${label} Content-Type: ${contentType}, Base64 Length: ${b64Data.length}`);
-
-        const buffer = Buffer.from(b64Data, 'base64');
-        console.log(`${label} Buffer created. Size: ${buffer.length}`);
+        const validated = validateImageDataUrl(dataUrl, label);
+        console.log(`${label} Content-Type: ${validated.mimeType}, Size: ${validated.size}`);
 
         // Upload to Fal Storage (pass Buffer directly)
         console.log(`${label} Uploading Buffer...`);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const url = await fal.storage.upload(buffer as any);
+        const url = await fal.storage.upload(validated.buffer as any);
         console.log(`${label} Uploaded to: ${url}`);
         return url;
       } catch (err: unknown) {
@@ -75,7 +63,7 @@ export async function POST(req: NextRequest) {
         guidance_scale: params.guidance_scale,
         strength: params.strength,
         seed: seed,
-        enable_safety_checker: false
+        enable_safety_checker: true
       },
       logs: true,
       onQueueUpdate: (update) => {

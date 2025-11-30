@@ -1,14 +1,38 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
 import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 
-const ANALYTICS_API_KEY = process.env.ANALYTICS_API_KEY || 'dev_analytics_key_change_in_production';
+const analyticsApiKey = process.env.ANALYTICS_API_KEY;
+
+const timingSafeCompare = (a?: string | null, b?: string | null): boolean => {
+    if (!a || !b) {
+        return false;
+    }
+
+    const bufferA = Buffer.from(a);
+    const bufferB = Buffer.from(b);
+
+    if (bufferA.length !== bufferB.length) {
+        return false;
+    }
+
+    return crypto.timingSafeEqual(bufferA, bufferB);
+};
 
 export async function GET(req: NextRequest) {
     try {
+        if (!analyticsApiKey) {
+            console.error('ANALYTICS_API_KEY is not configured');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
         // Check API key
         const apiKey = req.headers.get('X-Analytics-Key');
-        if (apiKey !== ANALYTICS_API_KEY) {
+        if (!timingSafeCompare(apiKey, analyticsApiKey)) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
