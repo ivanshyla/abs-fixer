@@ -1,74 +1,92 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+type PromptEntry = {
+    prompt: string;
+    negativePrompt?: string;
+};
+
+type PromptRecord = Record<string, PromptEntry>;
+
+type PromptFileShape = {
+    absTypes: PromptRecord;
+};
+
+let cachedPromptRecord: PromptRecord | null = null;
+
+const normalizePath = (filepath?: string) => {
+    if (!filepath) return undefined;
+    return path.isAbsolute(filepath) ? filepath : path.resolve(process.cwd(), filepath);
+};
+
+const parsePromptPayload = (payload: string, source: string): PromptRecord => {
+    try {
+        const parsed = JSON.parse(payload) as PromptRecord | PromptFileShape;
+        if (parsed && typeof parsed === "object" && "absTypes" in parsed) {
+            return parsed.absTypes;
+        }
+        return parsed as PromptRecord;
+    } catch (error) {
+        throw new Error(`Unable to parse prompt configuration from ${source}: ${(error as Error).message}`);
+    }
+};
+
+const loadPromptsFromFilesystem = (): PromptRecord => {
+    const searchPaths = [
+        normalizePath(process.env.ABS_PROMPTS_PATH),
+        path.resolve(process.cwd(), "config/prompts.json"),
+        path.resolve(process.cwd(), "config/prompts.example.json"),
+    ].filter(Boolean) as string[];
+
+    for (const candidate of searchPaths) {
+        if (existsSync(candidate)) {
+            const payload = readFileSync(candidate, "utf-8");
+            return parsePromptPayload(payload, candidate);
+        }
+    }
+
+    throw new Error(
+        "Prompt configuration not found. Set ABS_PROMPTS_JSON, ABS_PROMPTS_PATH, or create config/prompts.json.",
+    );
+};
+
+const getPromptRecord = (): PromptRecord => {
+    if (cachedPromptRecord) {
+        return cachedPromptRecord;
+    }
+
+    const envPayload = process.env.ABS_PROMPTS_JSON;
+    if (envPayload?.trim()) {
+        cachedPromptRecord = parsePromptPayload(envPayload, "ABS_PROMPTS_JSON");
+        return cachedPromptRecord;
+    }
+
+    cachedPromptRecord = loadPromptsFromFilesystem();
+    return cachedPromptRecord;
+};
+
+const resolvePromptEntry = (absType: string): PromptEntry => {
+    const record = getPromptRecord();
+    const entry = record[absType];
+    if (entry) {
+        return entry;
+    }
+
+    const availableTypes = Object.keys(record);
+    if (!availableTypes.length) {
+        throw new Error("Prompt configuration is empty.");
+    }
+
+    const fallbackType = record.natural_fit ? "natural_fit" : availableTypes[0];
+    return record[fallbackType];
+};
+
 export const getPromptForAbsType = (absType: string) => {
-    const prompts: Record<string, string> = {
-        natural_fit: 'Subtly enhance the abdominal area with very soft, natural muscle definition. Focus on realistic skin texture, pores, and natural lighting. Avoid plastic or shiny skin. Add gentle shadows to suggest muscle tone without extreme definition. The result should look like an average fit person with 18-20% body fat. Maintain all original skin imperfections and lighting conditions.',
-        athletic: 'Create visible but natural abdominal muscles. Focus on realistic anatomy and skin texture. Avoid hyper-realistic or cartoonish definition. The abs should look like a result of regular gym training, not bodybuilding. Body fat around 12-15%. Ensure the skin looks organic with natural subsurface scattering and texture. Match the lighting of the original photo perfectly.',
-        defined: 'Add well-defined abdominal muscles with clear separation, but keep the skin texture 100% realistic. Avoid the "shrink-wrapped" look. The muscles should look functional and strong. Body fat around 10-12%. Emphasize natural skin details, veins, and texture to prevent a plastic appearance. The result should look like a fitness enthusiast, not a CGI character.',
-        weight_loss_5: `Transform this person showing realistic 5kg (11lbs) weight loss results:
-- Slightly slimmer face with more defined jawline and subtle cheekbone visibility
-- Reduced bloating around midsection, flatter stomach area
-- Slimmer arms with less subcutaneous fat
-- More defined neck and collarbone area
-- Natural skin texture preserved, same lighting and skin tone
-- Subtle reduction in double chin if present
-- Clothes fit slightly looser
-- Same person, same pose, same background, photorealistic quality
-- No muscle definition added, purely fat reduction
-- Maintain natural skin elasticity appropriate for this amount of weight loss`,
-        weight_loss_10: `Transform this person showing realistic 10kg (22lbs) weight loss results:
-- Noticeably slimmer face with defined jawline and visible cheekbones
-- Significantly reduced midsection, visible waist narrowing
-- Slimmer arms and legs with reduced fat deposits
-- Prominent collarbones and more defined neck
-- Face appears slightly more angular, reduced facial puffiness
-- Double chin significantly reduced or eliminated
-- Natural skin with possible very minor skin laxity in problem areas
-- Clothes appear loose, body visibly transformed
-- Same person, same lighting, photorealistic professional quality
-- Body fat percentage reduced by approximately 8-12%
-- No artificial muscle enhancement, natural weight loss appearance`,
-        ozempic: `Transform this person showing typical GLP-1 medication (Ozempic/Wegovy) weight loss results after 6 months:
-- Dramatic facial fat loss: hollow cheeks, very prominent cheekbones, defined jawline
-- Characteristic "Ozempic face": slightly gaunt appearance, visible facial bone structure
-- Significant reduction in facial volume, especially in cheeks and under-chin area
-- Fine lines and wrinkles more visible due to volume loss (do not smooth skin)
-- Skin may appear slightly looser, especially around jaw and neck
-- Dramatically slimmer body, significant midsection reduction
-- Arms and legs noticeably thinner
-- Collarbones and shoulder bones more prominent
-- Overall appearance of rapid weight loss without muscle preservation
-- Skin texture shows signs of volume depletion
-- Same person, same pose, photorealistic, clinical accuracy
-- Do NOT add fitness or muscle tone - this is medication-based weight loss
-- Preserve or slightly emphasize nasolabial folds and under-eye area`,
-        six_months_running: `Transform this person to look like they completed six months of steady distance running:
-- Slightly leaner full body, reduced waist/hip fat, subtly defined calves and quads
-- Upright posture with relaxed shoulders and confident stance of an endurance athlete
-- Clothing fits a bit looser but stays identical to original photo
-- Preserve face, hairstyle, lighting, and skin texture exactly
-- Emphasize realistic endurance build, not extreme leanness`,
-        six_months_climbing: `Transform this person to show six months of regular climbing practice:
-- Stronger forearms with tendon definition, grip-ready hands (optional chalk hints)
-- Wider upper back and shoulders with lean, functional muscle
-- Engaged obliques and core stability without exaggerated six-pack
-- Maintain clothing, lighting, skin texture, and environment
-- Keep the subject's identity perfectly intact, photorealistic finish`,
-        six_months_gym: `Transform this person after six months of balanced gym training:
-- Noticeable chest and shoulder development, fuller arms, moderate core definition
-- Legs show proportional strength gains (no skipped leg day)
-- Body fat slightly reduced but still realistic and attainable
-- Preserve original outfit, lighting, and facial features
-- Result should look like a dedicated gym-goer, not a bodybuilder`
-    };
-    return prompts[absType] || prompts.natural_fit;
+    return resolvePromptEntry(absType).prompt;
 };
 
 export const getNegativePrompt = (absType: string) => {
-    const negatives: Record<string, string> = {
-        weight_loss_5: `muscle definition, six pack, athletic build, gym body, overly dramatic change, plastic surgery look, different person, changed facial features, smoothed skin, beauty filter, changed lighting`,
-        weight_loss_10: `bodybuilder, muscle gain, fitness model, unrealistic transformation, plastic surgery, different person, beauty filter, airbrushed skin, changed bone structure, different ethnicity`,
-        ozempic: `healthy glow, plump skin, muscle tone, athletic, fitness, filled face, botox, filler, smooth skin, youthful, weight gain, bloated, healthy fat distribution`
-    };
-    return negatives[absType] || '';
+    return getPromptRecord()[absType]?.negativePrompt ?? "";
 };
 
 export const getGenerationParams = (type: string, intensity: number = 50) => {

@@ -1,0 +1,35 @@
+{
+  "_comment": "Duplicate to config/prompts.json and replace placeholder prompts before deployment.",
+  "absTypes": {
+    "natural_fit": {
+      "prompt": "REPLACE_WITH_NATURAL_FIT_PROMPT"
+    },
+    "athletic": {
+      "prompt": "REPLACE_WITH_ATHLETIC_PROMPT"
+    },
+    "defined": {
+      "prompt": "REPLACE_WITH_DEFINED_PROMPT"
+    },
+    "weight_loss_5": {
+      "prompt": "REPLACE_WITH_WEIGHT_LOSS_5_PROMPT",
+      "negativePrompt": "REPLACE_WITH_WEIGHT_LOSS_5_NEGATIVE_PROMPT"
+    },
+    "weight_loss_10": {
+      "prompt": "REPLACE_WITH_WEIGHT_LOSS_10_PROMPT",
+      "negativePrompt": "REPLACE_WITH_WEIGHT_LOSS_10_NEGATIVE_PROMPT"
+    },
+    "ozempic": {
+      "prompt": "REPLACE_WITH_OZEMPIC_PROMPT",
+      "negativePrompt": "REPLACE_WITH_OZEMPIC_NEGATIVE_PROMPT"
+    },
+    "six_months_running": {
+      "prompt": "REPLACE_WITH_SIX_MONTHS_RUNNING_PROMPT"
+    },
+    "six_months_climbing": {
+      "prompt": "REPLACE_WITH_SIX_MONTHS_CLIMBING_PROMPT"
+    },
+    "six_months_gym": {
+      "prompt": "REPLACE_WITH_SIX_MONTHS_GYM_PROMPT"
+    }
+  }
+}
