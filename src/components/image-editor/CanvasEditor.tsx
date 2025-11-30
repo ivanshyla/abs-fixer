@@ -179,11 +179,11 @@ export default function CanvasEditor({
             </div>
 
             {/* Controls */}
-            <div className="mb-4 space-y-2 rounded-2xl border border-white/5 bg-white/5 p-3 backdrop-blur">
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+            <div className="mb-4 space-y-3 rounded-2xl border border-white/5 bg-white/5 p-3 backdrop-blur">
+                <div className="flex flex-wrap gap-2 sm:gap-3">
                     <button
                         onClick={() => setMode("brush")}
-                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                        className={`flex-1 min-w-[140px] rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
                             mode === "brush"
                                 ? "bg-white text-brand-dark shadow"
                                 : "bg-white/10 text-white hover:bg-white/20"
@@ -193,7 +193,7 @@ export default function CanvasEditor({
                     </button>
                     <button
                         onClick={() => setMode("erase")}
-                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                        className={`flex-1 min-w-[140px] rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
                             mode === "erase"
                                 ? "bg-white text-brand-dark shadow"
                                 : "bg-white/10 text-white hover:bg-white/20"
@@ -213,32 +213,30 @@ export default function CanvasEditor({
                             maskImg.onload = () => onMaskChange(maskImg);
                             maskImg.src = canvas.toDataURL();
                         }}
-                        className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors bg-white/10 hover:bg-white/20"
+                        className="flex-1 min-w-[160px] rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors bg-white/10 hover:bg-white/20"
                     >
                         Select full body
                     </button>
                     <button
                         onClick={clearMask}
-                        className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors bg-white/10 hover:bg-white/20"
+                        className="flex-1 min-w-[140px] rounded-xl px-4 py-2 text-sm font-semibold text-white/70 transition-colors bg-white/5 hover:bg-white/15"
                     >
                         Clear
                     </button>
                 </div>
-                <div className="flex flex-col gap-2 rounded-xl bg-brand-dark/60 p-3 text-white sm:flex-row sm:items-center">
-                    <div className="text-xs uppercase tracking-wide text-white/70">
-                        Brush size
+                <div className="rounded-xl bg-brand-dark/60 p-3 text-white">
+                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-white/70">
+                        <span>Brush size</span>
+                        <span className="text-sm font-semibold text-white">{brushSize}</span>
                     </div>
-                    <div className="flex flex-1 items-center gap-3">
-                        <input
-                            type="range"
-                            min="20"
-                            max="80"
-                            value={brushSize}
-                            onChange={(e) => setBrushSize(Number(e.target.value))}
-                            className="flex-1 accent-white"
-                        />
-                        <span className="w-10 text-right text-sm font-semibold">{brushSize}</span>
-                    </div>
+                    <input
+                        type="range"
+                        min="20"
+                        max="80"
+                        value={brushSize}
+                        onChange={(e) => setBrushSize(Number(e.target.value))}
+                        className="mt-2 w-full accent-white"
+                    />
                 </div>
             </div>
         </div>

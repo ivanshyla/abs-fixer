@@ -411,6 +411,19 @@ export default function ImageEditor() {
 
       {step === 'pay' && clientSecret && (
         <div className="max-w-md mx-auto">
+          {error && (
+            <div className="mb-4 p-4 bg-red-900/20 border-l-4 border-red-500 rounded-lg">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <span className="text-2xl">⚠️</span>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-semibold text-red-400 mb-1">Payment error</h3>
+                  <p className="text-sm text-red-300">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
           {stripePromise ? (
             <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#9BA8AB', colorBackground: '#11212D', colorText: '#CCD0CF' } } }}>
               <PaymentForm

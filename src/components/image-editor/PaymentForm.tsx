@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 interface PaymentFormProps {
-    onSuccess: () => void;
+    onSuccess: () => Promise<void> | void;
     onError: (error: string) => void;
     loading: boolean;
 }
@@ -25,6 +25,9 @@ export default function PaymentForm({
 
         const { error } = await stripe.confirmPayment({
             elements,
+            confirmParams: {
+                return_url: `${window.location.origin}/`,
+            },
             redirect: 'if_required',
         });
 
@@ -32,7 +35,8 @@ export default function PaymentForm({
             onError(error.message || 'Payment failed');
             setProcessing(false);
         } else {
-            onSuccess();
+            await onSuccess();
+            setProcessing(false);
         }
     };
 

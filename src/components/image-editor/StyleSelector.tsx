@@ -8,9 +8,9 @@ export const TRANSFORMATION_CATEGORIES = {
         { id: 'defined', label: 'Defined', description: 'Clear six-pack visible' },
     ],
     weightLoss: [
-        { id: 'weight_loss_5', label: '-5 kg (Beta)', description: 'Toned, slimmer look' },
-        { id: 'weight_loss_10', label: '-10 kg (Beta)', description: 'Significant change' },
-        { id: 'ozempic', label: 'Ozempic Effect (Beta)', description: 'Rapid weight loss look' },
+        { id: 'weight_loss_5', label: '-5 kg', description: 'Toned, slimmer look' },
+        { id: 'weight_loss_10', label: '-10 kg', description: 'Significant change' },
+        { id: 'ozempic', label: 'Ozempic Effect', description: 'Rapid weight loss look' },
     ],
     training: [
         { id: 'six_months_running', label: '6 Months Running', description: 'Endurance athlete vibe' },
