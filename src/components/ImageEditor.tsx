@@ -32,13 +32,13 @@ export default function ImageEditor() {
   const [selectedAbsType, setSelectedAbsType] = useState<string>('natural_fit');
   const [userEmail, setUserEmail] = useState<string>('');
   const [intensity, setIntensity] = useState<number>(50); // 0-100 slider
-  const [provider, setProvider] = useState<'fal' | 'vertex' | 'getimg'>('fal');
+  const [provider] = useState<'fal' | 'vertex' | 'getimg'>('fal');
   const [showSaveWarning, setShowSaveWarning] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
 
   // Use new credit system
-  const { credits, loading: creditsLoading, useCredit, hasCredits } = useCredits();
+  const { credits, consumeCredit, hasCredits } = useCredits();
 
   // Load payment ID from local storage
   React.useEffect(() => {
@@ -197,7 +197,7 @@ export default function ImageEditor() {
   // Wrapper to handle credit deduction
   const handleCreditGeneration = async () => {
     if (hasCredits()) {
-      const success = await useCredit();
+      const success = await consumeCredit();
       if (success) {
         await generateImage();
         setShowSaveWarning(true);
@@ -213,7 +213,7 @@ export default function ImageEditor() {
   const handleRegenerate = async (style: string) => {
     setSelectedAbsType(style);
     if (hasCredits()) {
-      const success = await useCredit();
+      const success = await consumeCredit();
       if (success) {
         await generateImage(style);
         setShowSaveWarning(true);
@@ -518,7 +518,7 @@ export default function ImageEditor() {
             </div>
             <div className="p-6">
               <p className="text-brand-lighter mb-4">
-                We believe in transparent pricing. Here's exactly where your dollar goes:
+                We believe in transparent pricing. Here&apos;s exactly where your dollar goes:
               </p>
               <div className="space-y-3 mb-6 text-brand-lightest">
                 <div className="flex justify-between items-center">

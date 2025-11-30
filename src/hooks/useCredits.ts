@@ -75,7 +75,7 @@ export const useCredits = () => {
         }
     };
 
-    const useCredit = async (): Promise<boolean> => {
+    const consumeCredit = async (): Promise<boolean> => {
         // Check server-side credits first
         const hasServerCredits = await checkCreditsOnServer();
         if (!hasServerCredits) {
@@ -112,7 +112,7 @@ export const useCredits = () => {
         credits,
         fingerprint,
         loading,
-        useCredit,
+        consumeCredit,
         hasCredits,
     };
 };
