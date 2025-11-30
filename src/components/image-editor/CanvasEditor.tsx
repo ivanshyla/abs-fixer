@@ -133,6 +133,9 @@ export default function CanvasEditor({
         onMaskChange(null);
     };
 
+    const stageWidth = imageEl.width * scale;
+    const stageHeight = imageEl.height * scale;
+
     return (
         <div>
             {/* Canvas */}
@@ -144,27 +147,35 @@ export default function CanvasEditor({
                     Use the tools below to adjust the mask
                 </p>
             </div>
-            <div ref={containerRef} className="bg-brand-dark rounded-lg mb-4 border-2 border-dashed border-brand-light">
-                <Stage
-                    ref={stageRef}
-                    width={imageEl.width * scale}
-                    height={imageEl.height * scale}
-                    onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
+            <div ref={containerRef} className="mb-4">
+                <div
+                    className="bg-brand-dark rounded-lg border-2 border-dashed border-brand-light mx-auto"
+                    style={{
+                        width: `${stageWidth}px`,
+                        height: `${stageHeight}px`,
+                    }}
                 >
-                    <Layer>
-                        <KonvaImage image={imageEl} scaleX={scale} scaleY={scale} />
-                        {maskImage && (
-                            <KonvaImage
-                                image={maskImage}
-                                scaleX={scale}
-                                scaleY={scale}
-                                opacity={0.5}
-                            />
-                        )}
-                    </Layer>
-                </Stage>
+                    <Stage
+                        ref={stageRef}
+                        width={stageWidth}
+                        height={stageHeight}
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                    >
+                        <Layer>
+                            <KonvaImage image={imageEl} scaleX={scale} scaleY={scale} />
+                            {maskImage && (
+                                <KonvaImage
+                                    image={maskImage}
+                                    scaleX={scale}
+                                    scaleY={scale}
+                                    opacity={0.5}
+                                />
+                            )}
+                        </Layer>
+                    </Stage>
+                </div>
             </div>
 
             {/* Controls */}
