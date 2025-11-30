@@ -1,5 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { defaultProvider } from "@aws-sdk/credential-provider-node";
 
 const readEnv = (key: string): string | undefined => process.env[key];
 
@@ -14,7 +15,7 @@ const explicitCredentials = accessKeyId && secretAccessKey
 
 const client = new DynamoDBClient({
     region,
-    ...(explicitCredentials ? { credentials: explicitCredentials } : {}),
+    credentials: explicitCredentials ?? defaultProvider(),
 });
 
 export const dynamo = DynamoDBDocumentClient.from(client);
