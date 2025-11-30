@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as fal from "@fal-ai/serverless-client";
 import { getPromptForAbsType, getGenerationParams } from "@/lib/prompts";
+import { DEMO_RESULT_URL } from "@/lib/envFlags";
 
-// Configure the client with the API key
-fal.config({
-  credentials: process.env.FAL_KEY || process.env.FAL_AI_API_KEY,
-});
+const falKey = process.env.FAL_KEY || process.env.FAL_AI_API_KEY;
+
+if (falKey) {
+  // Configure the client with the API key
+  fal.config({
+    credentials: falKey,
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,6 +22,15 @@ export async function POST(req: NextRequest) {
         { error: "Missing required fields: absType, image, mask" },
         { status: 400 }
       );
+    }
+
+    if (!falKey) {
+      const fallbackSeed = Date.now();
+      return NextResponse.json({
+        image: DEMO_RESULT_URL,
+        model_used: "demo:fallback",
+        seed: fallbackSeed,
+      });
     }
 
     // Resolve prompt and params server-side

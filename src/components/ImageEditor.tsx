@@ -5,6 +5,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import dynamic from "next/dynamic";
 import { useCredits } from "@/hooks/useCredits";
+import { DEMO_MODE, PERSISTENCE_ENABLED } from "@/lib/envFlags";
 
 // Import sub-components
 import UploadStep from "./image-editor/UploadStep";
@@ -19,6 +20,26 @@ const CanvasEditor = dynamic(() => import("./image-editor/CanvasEditor"), {
 
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+const isDemoMode = DEMO_MODE;
+const persistenceEnabled = PERSISTENCE_ENABLED;
+
+const createDemoGenerationId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `demo-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+};
+
+const rememberDemoGeneration = (payload: { id: string; absType: string; image: string; intensity: number }) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    localStorage.setItem('abs_demo_generation', JSON.stringify(payload));
+  } catch (error) {
+    console.warn('Failed to persist demo generation locally:', error);
+  }
+};
 
 type Step = 'upload' | 'draw' | 'pay' | 'result';
 
@@ -32,7 +53,7 @@ export default function ImageEditor() {
   const [selectedAbsType, setSelectedAbsType] = useState<string>('natural_fit');
   const [userEmail, setUserEmail] = useState<string>('');
   const [intensity, setIntensity] = useState<number>(50); // 0-100 slider
-  const [provider] = useState<'fal' | 'vertex' | 'getimg'>('fal');
+  const provider: 'fal' | 'vertex' | 'getimg' = 'fal';
   const [showSaveWarning, setShowSaveWarning] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
@@ -57,6 +78,7 @@ export default function ImageEditor() {
 
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [maskImage, setMaskImage] = useState<HTMLImageElement | null>(null);
+  const creditsLabel = Number.isFinite(credits) ? credits : '∞';
 
   // Handle file upload
   const handleImageSelect = (file: File) => {
@@ -74,6 +96,11 @@ export default function ImageEditor() {
 
   // Payment flow
   const handleProceedToPayment = async () => {
+    if (isDemoMode) {
+      setError('Платежи отключены в демо-режиме. Просто используйте генерацию выше.');
+      return;
+    }
+
     if (!userEmail) {
       setError('Please enter your email');
       return;
@@ -151,28 +178,35 @@ export default function ImageEditor() {
         throw new Error(data.error || 'Generation failed');
       }
 
-      // Save generation
-      const saveResponse = await fetch('/api/save-generation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: null,
+      if (persistenceEnabled) {
+        const saveResponse = await fetch('/api/save-generation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: null,
+            absType: styleToUse,
+            outputImageUrl: data.image,
+            modelUsed: data.model_used,
+            intensity,
+            seed: data.seed,
+            paymentId: paymentIntentId || 'dev_bypass',
+          }),
+        });
+
+        const saveData = await saveResponse.json();
+
+        if (saveResponse.ok) {
+          setGenerationId(saveData.generation.id);
+        }
+      } else {
+        const demoId = createDemoGenerationId();
+        setGenerationId(demoId);
+        rememberDemoGeneration({
+          id: demoId,
           absType: styleToUse,
-          outputImageUrl: data.image,
-          modelUsed: data.model_used,
-          // promptUsed: ... // No longer available on client, server saves it
-          // negativePrompt: ... // No longer available on client
-          // strength: ... // No longer available on client
-          intensity, // Save intensity instead
-          seed: data.seed,
-          paymentId: paymentIntentId || 'dev_bypass',
-        }),
-      });
-
-      const saveData = await saveResponse.json();
-
-      if (saveResponse.ok) {
-        setGenerationId(saveData.generation.id);
+          image: data.image,
+          intensity,
+        });
       }
 
       setResultUrl(data.image);
@@ -229,6 +263,12 @@ export default function ImageEditor() {
   const handleRating = async (rating: -1 | 1) => {
     if (!generationId) {
       console.warn('Cannot rate: Missing generationId');
+      return;
+    }
+
+    if (!persistenceEnabled) {
+      setUserRating(rating);
+      setFeedbackGiven(true);
       return;
     }
 
@@ -336,14 +376,26 @@ export default function ImageEditor() {
               {credits > 0 ? (
                 <div className="mb-4">
                   <div className="text-sm font-bold text-green-400 mb-2">
-                    Credits Remaining: {credits}
+                    Credits Remaining: {creditsLabel}
+                    {isDemoMode && (
+                      <span className="ml-2 text-xs font-normal text-green-200">(demo)</span>
+                    )}
                   </div>
+                  {isDemoMode && (
+                    <p className="text-xs text-green-200 mb-2">
+                      Локальный демо-режим: никаких платежей или бэкенда не требуется.
+                    </p>
+                  )}
                   <button
                     onClick={handleCreditGeneration}
                     disabled={loading || !maskImage}
                     className="w-full py-3 rounded-lg font-bold bg-green-600 text-white hover:bg-green-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Generating...' : 'Generate Image (1 Credit)'}
+                    {loading
+                      ? 'Generating...'
+                      : isDemoMode
+                        ? 'Generate Image (Demo)'
+                        : 'Generate Image (1 Credit)'}
                   </button>
                 </div>
               ) : (
