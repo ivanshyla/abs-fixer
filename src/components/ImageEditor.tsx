@@ -1,15 +1,12 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
 import dynamic from "next/dynamic";
 import { useCredits } from "@/hooks/useCredits";
 
 // Import sub-components
 import UploadStep from "./image-editor/UploadStep";
 import StyleSelector from "./image-editor/StyleSelector";
-import PaymentForm from "./image-editor/PaymentForm";
 import ResultView from "./image-editor/ResultView";
 
 // Dynamic import for CanvasEditor to avoid SSR issues with Konva
@@ -17,8 +14,14 @@ const CanvasEditor = dynamic(() => import("./image-editor/CanvasEditor"), {
   ssr: false,
 });
 
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+const PaymentStep = dynamic(() => import("./image-editor/StripePayment"), {
+  ssr: false,
+  loading: () => (
+    <div className="py-12 text-center text-brand-light">
+      Loading secure payment form...
+    </div>
+  ),
+});
 
 type Step = 'upload' | 'draw' | 'pay' | 'result';
 
@@ -424,23 +427,13 @@ export default function ImageEditor() {
               </div>
             </div>
           )}
-          {stripePromise ? (
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#9BA8AB', colorBackground: '#11212D', colorText: '#CCD0CF' } } }}>
-              <PaymentForm
-                onSuccess={handleGenerateAfterPayment}
-                onError={setError}
-                loading={loading}
-              />
-            </Elements>
-          ) : (
-            <div className="text-red-500">Stripe configuration error</div>
-          )}
-          <button
-            onClick={() => setStep('draw')}
-            className="mt-4 text-brand-light hover:text-brand-lighter underline w-full text-center"
-          >
-            Back to Editor
-          </button>
+          <PaymentStep
+            clientSecret={clientSecret}
+            loading={loading}
+            onSuccess={handleGenerateAfterPayment}
+            onError={setError}
+            onBack={() => setStep('draw')}
+          />
         </div>
       )}
 
