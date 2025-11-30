@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
 import { getPromptForAbsType, getNegativePrompt, getGenerationParams } from "@/lib/prompts";
+import { validateImageDataUrl } from "@/lib/imageValidation";
 
 // Initialize Google Auth with explicit credentials
 const getGoogleAuth = () => {
@@ -70,17 +71,11 @@ export async function POST(req: NextRequest) {
             throw new Error("Failed to generate Google Access Token");
         }
 
-        // Helper to extract Base64
-        const extractBase64 = (dataUrl: string) => {
-            const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (!matches || matches.length !== 3) {
-                throw new Error("Invalid Data URL format");
-            }
-            return matches[2];
-        };
+        const validatedImage = validateImageDataUrl(image, "image");
+        const validatedMask = validateImageDataUrl(mask, "mask");
 
-        const imageBase64 = extractBase64(image);
-        const maskBase64 = extractBase64(mask);
+        const imageBase64 = validatedImage.base64;
+        const maskBase64 = validatedMask.base64;
 
         // Vertex AI API Endpoint for Imagen
         const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/imagegeneration@006:predict`;

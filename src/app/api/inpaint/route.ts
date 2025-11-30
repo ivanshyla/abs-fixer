@@ -1,19 +1,9 @@
 import { NextRequest } from "next/server";
 import Replicate from "replicate";
+import { validateImageDataUrl } from "@/lib/imageValidation";
 
 const token = process.env.REPLICATE_API_TOKEN;
 const replicate = new Replicate({ auth: token ?? "" });
-
-function dataURLToBlob(dataURL: string): Blob {
-  const [header, base64] = dataURL.split(',');
-  const mimeType = header.match(/:(.*?);/)?.[1] || 'image/png';
-  const binary = atob(base64);
-  const array = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    array[i] = binary.charCodeAt(i);
-  }
-  return new Blob([array], { type: mimeType });
-}
 
 type InpaintRequest = {
   image: string;
@@ -73,12 +63,15 @@ export async function POST(req: NextRequest) {
 
     // Convert data URLs to Blobs for Replicate
     console.log("Converting image data URL to blob...");
-    const imageBlob = dataURLToBlob(image);
+    const validatedImage = validateImageDataUrl(image, "image");
+    const validatedMask = validateImageDataUrl(mask, "mask");
+
+    const imageBlob = new Blob([validatedImage.buffer], { type: validatedImage.mimeType });
     const imageFile = await replicate.files.create(imageBlob);
     console.log("Image uploaded:", imageFile.urls.get);
     
     console.log("Converting mask data URL to blob...");  
-    const maskBlob = dataURLToBlob(mask);
+    const maskBlob = new Blob([validatedMask.buffer], { type: validatedMask.mimeType });
     const maskFile = await replicate.files.create(maskBlob);
     console.log("Mask uploaded:", maskFile.urls.get);
     

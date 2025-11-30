@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
-import { UpdateCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 export async function POST(req: NextRequest) {
     try {
