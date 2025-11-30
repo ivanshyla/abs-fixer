@@ -1,22 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as fal from "@fal-ai/serverless-client";
 import { getPromptForAbsType, getGenerationParams } from "@/lib/prompts";
+import { reserveCredit } from "@/lib/credits";
 
 // Configure the client with the API key
 fal.config({
   credentials: process.env.FAL_KEY || process.env.FAL_AI_API_KEY,
 });
 
+const allowDevGeneration = process.env.ALLOW_DEV_GENERATION === "true" || process.env.NODE_ENV !== "production";
+const creditErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.name === "ConditionalCheckFailedException") {
+    return "No credits remaining or payment not confirmed yet.";
+  }
+  return error instanceof Error ? error.message : "Unable to use credit";
+};
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { absType, intensity, image, mask, seed } = body;
+    const { absType, intensity, image, mask, seed, paymentId } = body;
 
     if (!absType || !image || !mask) {
       return NextResponse.json(
         { error: "Missing required fields: absType, image, mask" },
         { status: 400 }
       );
+    }
+
+    if (!paymentId && !allowDevGeneration) {
+      return NextResponse.json({ error: "Missing paymentId. Please complete payment." }, { status: 403 });
+    }
+
+    if (paymentId && paymentId !== "dev_bypass") {
+      try {
+        await reserveCredit(paymentId);
+      } catch (creditError) {
+        console.error("Credit reservation failed:", creditError);
+        return NextResponse.json(
+          { error: creditErrorMessage(creditError) },
+          { status: 402 }
+        );
+      }
     }
 
     // Resolve prompt and params server-side

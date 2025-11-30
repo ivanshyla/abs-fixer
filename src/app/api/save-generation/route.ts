@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
-import { PutCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from 'uuid';
 import { getPromptForAbsType } from '@/lib/prompts';
 
@@ -58,39 +58,6 @@ export async function POST(req: NextRequest) {
       generationParams,
       imageMetadata: null,
     };
-
-    // Credit Deduction Logic
-    if (paymentId && paymentId !== 'dev_bypass') {
-      // 1. Check credits
-      const paymentResponse = await dynamo.send(new GetCommand({
-        TableName: TABLE_NAMES.PAYMENTS,
-        Key: { id: paymentId }
-      }));
-
-      const payment = paymentResponse.Item;
-
-      if (!payment) {
-        throw new Error('Payment record not found');
-      }
-
-      const creditsTotal = payment.credits_total || 1; // Default to 1 if not set (legacy)
-      const creditsUsed = payment.credits_used || 0;
-
-      if (creditsUsed >= creditsTotal) {
-        throw new Error('No credits remaining for this payment');
-      }
-
-      // 2. Increment credits used
-      await dynamo.send(new UpdateCommand({
-        TableName: TABLE_NAMES.PAYMENTS,
-        Key: { id: paymentId },
-        UpdateExpression: "set credits_used = if_not_exists(credits_used, :zero) + :inc",
-        ExpressionAttributeValues: {
-          ":inc": 1,
-          ":zero": 0
-        }
-      }));
-    }
 
     // Save to generations table
     await dynamo.send(new PutCommand({
