@@ -3,6 +3,26 @@ import { dynamo, TABLE_NAMES } from '@/lib/aws';
 import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 
 const ANALYTICS_API_KEY = process.env.ANALYTICS_API_KEY || 'dev_analytics_key_change_in_production';
+const CACHE_TTL_MS = 60 * 1000;
+
+type AnalyticsPayload = {
+    totalGenerations: number;
+    withFeedback: number;
+    likeRate: number;
+    likes: number;
+    dislikes: number;
+    byAbsType: Record<string, { likes: number; dislikes: number; rate: number }>;
+    byProvider: Record<string, { likes: number; dislikes: number; rate: number }>;
+    byStrengthRange: Record<string, { likes: number; dislikes: number; rate: number }>;
+    topPromptVariations: Array<{
+        prompt: string;
+        likes: number;
+        dislikes: number;
+        rate: number;
+    }>;
+};
+
+let analyticsCache: { data: AnalyticsPayload; expiresAt: number } | null = null;
 
 export async function GET(req: NextRequest) {
     try {
@@ -15,12 +35,23 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // Scan all generations
-        const response = await dynamo.send(new ScanCommand({
-            TableName: TABLE_NAMES.GENERATIONS,
-        }));
+        const now = Date.now();
+        if (analyticsCache && analyticsCache.expiresAt > now) {
+            return NextResponse.json(analyticsCache.data);
+        }
 
-        const generations = response.Items || [];
+        const generations = [];
+        let ExclusiveStartKey: Record<string, unknown> | undefined;
+        do {
+            const response = await dynamo.send(new ScanCommand({
+                TableName: TABLE_NAMES.GENERATIONS,
+                ProjectionExpression: "id, abs_type, feedback, generationParams, model_used, prompt_used",
+                ExclusiveStartKey,
+            }));
+            generations.push(...(response.Items || []));
+            ExclusiveStartKey = response.LastEvaluatedKey;
+        } while (ExclusiveStartKey);
+
         const totalGenerations = generations.length;
         const withFeedback = generations.filter(g => g.feedback).length;
 
@@ -100,7 +131,7 @@ export async function GET(req: NextRequest) {
             .sort((a, b) => b.likes - a.likes)
             .slice(0, 10);
 
-        return NextResponse.json({
+        const payload: AnalyticsPayload = {
             totalGenerations,
             withFeedback,
             likeRate,
@@ -110,7 +141,14 @@ export async function GET(req: NextRequest) {
             byProvider,
             byStrengthRange,
             topPromptVariations,
-        });
+        };
+
+        analyticsCache = {
+            data: payload,
+            expiresAt: now + CACHE_TTL_MS,
+        };
+
+        return NextResponse.json(payload);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         console.error('Analytics error:', message);

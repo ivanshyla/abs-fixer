@@ -1,30 +1,37 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
 import dynamic from "next/dynamic";
 import { useCredits } from "@/hooks/useCredits";
 
 // Import sub-components
 import UploadStep from "./image-editor/UploadStep";
 import StyleSelector from "./image-editor/StyleSelector";
-import PaymentForm from "./image-editor/PaymentForm";
 import ResultView from "./image-editor/ResultView";
 
 // Dynamic import for CanvasEditor to avoid SSR issues with Konva
 const CanvasEditor = dynamic(() => import("./image-editor/CanvasEditor"), {
   ssr: false,
 });
-
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+const StripePaymentStep = dynamic(
+  () => import("./image-editor/StripePayment"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-center py-10 text-brand-light">
+        Preparing secure checkout…
+      </div>
+    ),
+  }
+);
 
 type Step = 'upload' | 'draw' | 'pay' | 'result';
 
 export default function ImageEditor() {
   const [step, setStep] = useState<Step>('upload');
   const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,18 +65,71 @@ export default function ImageEditor() {
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [maskImage, setMaskImage] = useState<HTMLImageElement | null>(null);
 
-  // Handle file upload
-  const handleImageSelect = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (evt) => {
+  const MAX_IMAGE_DIMENSION = 1024;
+  const JPEG_QUALITY = 0.92;
+
+  const createImageFromDataUrl = (dataUrl: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
       const img = new window.Image();
-      img.onload = () => {
-        setImageEl(img);
-        setStep('draw');
-      };
-      img.src = evt.target?.result as string;
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  };
+
+  const optimizeImageFile = async (file: File) => {
+    const fileDataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read image file"));
+      reader.readAsDataURL(file);
+    });
+
+    const sourceImage = await createImageFromDataUrl(fileDataUrl);
+    const { width, height } = sourceImage;
+    const maxSide = Math.max(width, height);
+    let targetWidth = width;
+    let targetHeight = height;
+
+    if (maxSide > MAX_IMAGE_DIMENSION) {
+      const scale = MAX_IMAGE_DIMENSION / maxSide;
+      targetWidth = Math.round(width * scale);
+      targetHeight = Math.round(height * scale);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Canvas not supported");
+    }
+    ctx.drawImage(sourceImage, 0, 0, targetWidth, targetHeight);
+    const optimizedDataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+    const optimizedImage = await createImageFromDataUrl(optimizedDataUrl);
+
+    return {
+      dataUrl: optimizedDataUrl,
+      image: optimizedImage,
+      dimensions: { width: targetWidth, height: targetHeight },
     };
-    reader.readAsDataURL(file);
+  };
+
+  // Handle file upload
+  const handleImageSelect = async (file: File) => {
+    setLoading(true);
+    try {
+      const optimized = await optimizeImageFile(file);
+      setImageEl(optimized.image);
+      setImageDataUrl(optimized.dataUrl);
+      setImageDimensions(optimized.dimensions);
+      setStep('draw');
+    } catch (uploadError) {
+      console.error(uploadError);
+      setError('Failed to process image. Please try a different file.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Payment flow
@@ -117,12 +177,12 @@ export default function ImageEditor() {
     const styleToUse = styleOverride || selectedAbsType;
 
     try {
-      const imageDataURL = imageEl?.src || '';
+      const imageDataURL = imageDataUrl || imageEl?.src || '';
       const maskDataURL = maskCanvasRef.current?.toDataURL() || '';
 
       // Get dimensions
-      const width = imageEl?.naturalWidth;
-      const height = imageEl?.naturalHeight;
+      const width = imageDimensions?.width || imageEl?.naturalWidth;
+      const height = imageDimensions?.height || imageEl?.naturalHeight;
 
       // Choose API endpoint based on provider
       const apiEndpoint =
@@ -424,17 +484,12 @@ export default function ImageEditor() {
               </div>
             </div>
           )}
-          {stripePromise ? (
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#9BA8AB', colorBackground: '#11212D', colorText: '#CCD0CF' } } }}>
-              <PaymentForm
-                onSuccess={handleGenerateAfterPayment}
-                onError={setError}
-                loading={loading}
-              />
-            </Elements>
-          ) : (
-            <div className="text-red-500">Stripe configuration error</div>
-          )}
+          <StripePaymentStep
+            clientSecret={clientSecret}
+            onSuccess={handleGenerateAfterPayment}
+            onError={setError}
+            loading={loading}
+          />
           <button
             onClick={() => setStep('draw')}
             className="mt-4 text-brand-light hover:text-brand-lighter underline w-full text-center"
@@ -456,6 +511,8 @@ export default function ImageEditor() {
           onReset={() => {
             setStep('upload');
             setImageEl(null);
+            setImageDataUrl(null);
+            setImageDimensions(null);
             setResultUrl(null);
             setUserRating(null);
             setFeedbackGiven(false);
