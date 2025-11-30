@@ -1,5 +1,7 @@
 "use client";
+import Link from "next/link";
 import dynamic from "next/dynamic";
+import { DEMO_MODE } from "@/lib/envFlags";
 
 const ImageEditor = dynamic(() => import("../../components/ImageEditor"), {
   ssr: false,
@@ -10,6 +12,8 @@ const ImageEditor = dynamic(() => import("../../components/ImageEditor"), {
   )
 });
 
+const isDemoMode = DEMO_MODE;
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-brand-darkest text-brand-lightest relative overflow-hidden">
@@ -17,10 +21,17 @@ export default function Home() {
       <header className="border-b border-brand-medium bg-brand-darkest/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <a href="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
               <span className="text-2xl font-semibold text-white tracking-tight" style={{ fontFamily: '"Gill Sans", "Gill Sans MT", Calibri, sans-serif' }}>ABS.AI</span>
-            </a>
-            <div className="text-sm text-brand-light">AI-Powered Enhancement</div>
+            </Link>
+            <div className="flex items-center gap-3 text-sm text-brand-light">
+              <span>AI-Powered Enhancement</span>
+              {isDemoMode && (
+                <span className="uppercase text-xs font-semibold tracking-wide text-amber-200 bg-amber-500/10 border border-amber-400/40 px-2 py-1 rounded">
+                  Demo mode
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -35,6 +46,11 @@ export default function Home() {
             Upload your photo, paint the area you want to enhance, and let our AI create natural, realistic results.
           </p>
         </div>
+        {isDemoMode && (
+          <div className="max-w-3xl mx-auto mb-10 bg-amber-500/10 border border-amber-400/40 text-amber-50 px-6 py-4 rounded-xl text-sm">
+            Демо-режим включен: можно сразу тестировать интерфейс без Stripe, AWS и Supabase. Генерации используют подготовленный пример, так что всё работает «из коробки».
+          </div>
+        )}
 
         {/* Editor */}
         <ImageEditor />
