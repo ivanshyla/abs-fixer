@@ -48,7 +48,7 @@ export default function LandingPage() {
                         <div className="space-y-4">
                             <div className="bg-brand-dark rounded-2xl overflow-hidden aspect-[3/4] relative group border border-brand-medium">
                                 <Image
-                                    src="/before.jpg"
+                                    src="/before.webp"
                                     alt="Before transformation"
                                     fill
                                     className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
@@ -59,7 +59,7 @@ export default function LandingPage() {
                         <div className="space-y-4">
                             <div className="bg-brand-dark rounded-2xl overflow-hidden aspect-[3/4] relative group shadow-2xl ring-4 ring-brand-medium/50">
                                 <Image
-                                    src="/after.jpg"
+                                    src="/after.webp"
                                     alt="After transformation"
                                     fill
                                     className="object-cover"
