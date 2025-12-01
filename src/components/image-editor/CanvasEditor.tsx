@@ -21,6 +21,47 @@ export default function CanvasEditor({
     const [isDrawing, setIsDrawing] = useState(false);
     const [brushSize, setBrushSize] = useState(40);
     const [mode, setMode] = useState<"brush" | "erase">("brush");
+    const maskPreviewRaf = useRef<number | null>(null);
+    const pendingObjectUrl = useRef<string | null>(null);
+
+    // Convert current canvas mask into an Image asynchronously.
+    const queueMaskPreviewUpdate = () => {
+        const canvas = maskCanvasRef.current;
+        if (!canvas) return;
+        if (maskPreviewRaf.current) {
+            return;
+        }
+        maskPreviewRaf.current = window.requestAnimationFrame(() => {
+            maskPreviewRaf.current = null;
+            canvas.toBlob((blob) => {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const img = new window.Image();
+                img.onload = () => {
+                    onMaskChange(img);
+                    if (pendingObjectUrl.current) {
+                        URL.revokeObjectURL(pendingObjectUrl.current);
+                    }
+                    pendingObjectUrl.current = url;
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            }, "image/png");
+        });
+    };
+
+    useEffect(() => {
+        return () => {
+            if (maskPreviewRaf.current) {
+                cancelAnimationFrame(maskPreviewRaf.current);
+            }
+            if (pendingObjectUrl.current) {
+                URL.revokeObjectURL(pendingObjectUrl.current);
+            }
+        };
+    }, []);
 
     // Initialize/Update mask canvas size when image changes
     useEffect(() => {
@@ -83,6 +124,7 @@ export default function CanvasEditor({
         const imageY = pos.y / scale;
 
         drawOnMask(imageX, imageY);
+        queueMaskPreviewUpdate();
     };
 
     const handlePointerMove = (e: unknown) => {
@@ -96,6 +138,7 @@ export default function CanvasEditor({
         const imageY = pos.y / scale;
 
         drawOnMask(imageX, imageY);
+        queueMaskPreviewUpdate();
     };
 
     const handlePointerUp = () => {
@@ -118,9 +161,6 @@ export default function CanvasEditor({
         ctx.arc(x, y, scaledBrushSize / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        const maskImg = new window.Image();
-        maskImg.onload = () => onMaskChange(maskImg);
-        maskImg.src = canvas.toDataURL();
     };
 
     const clearMask = () => {
@@ -131,6 +171,10 @@ export default function CanvasEditor({
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         onMaskChange(null);
+        if (pendingObjectUrl.current) {
+            URL.revokeObjectURL(pendingObjectUrl.current);
+            pendingObjectUrl.current = null;
+        }
     };
 
     const stageWidth = imageEl.width * scale;
@@ -209,9 +253,7 @@ export default function CanvasEditor({
                             if (!ctx) return;
                             ctx.fillStyle = "white";
                             ctx.fillRect(0, 0, canvas.width, canvas.height);
-                            const maskImg = new window.Image();
-                            maskImg.onload = () => onMaskChange(maskImg);
-                            maskImg.src = canvas.toDataURL();
+                            queueMaskPreviewUpdate();
                         }}
                         className="flex-1 min-w-[160px] rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors bg-white/10 hover:bg-white/20"
                     >

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
-import { PutCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from 'uuid';
 import { getPromptForAbsType } from '@/lib/prompts';
 
@@ -61,35 +61,25 @@ export async function POST(req: NextRequest) {
 
     // Credit Deduction Logic
     if (paymentId && paymentId !== 'dev_bypass') {
-      // 1. Check credits
-      const paymentResponse = await dynamo.send(new GetCommand({
-        TableName: TABLE_NAMES.PAYMENTS,
-        Key: { id: paymentId }
-      }));
-
-      const payment = paymentResponse.Item;
-
-      if (!payment) {
-        throw new Error('Payment record not found');
-      }
-
-      const creditsTotal = payment.credits_total || 1; // Default to 1 if not set (legacy)
-      const creditsUsed = payment.credits_used || 0;
-
-      if (creditsUsed >= creditsTotal) {
-        throw new Error('No credits remaining for this payment');
-      }
-
-      // 2. Increment credits used
-      await dynamo.send(new UpdateCommand({
-        TableName: TABLE_NAMES.PAYMENTS,
-        Key: { id: paymentId },
-        UpdateExpression: "set credits_used = if_not_exists(credits_used, :zero) + :inc",
-        ExpressionAttributeValues: {
-          ":inc": 1,
-          ":zero": 0
+      try {
+        await dynamo.send(new UpdateCommand({
+          TableName: TABLE_NAMES.PAYMENTS,
+          Key: { id: paymentId },
+          UpdateExpression: "SET credits_used = if_not_exists(credits_used, :zero) + :inc",
+          ConditionExpression: "attribute_exists(id) AND if_not_exists(credits_used, :zero) < if_not_exists(credits_total, :default_total)",
+          ExpressionAttributeValues: {
+            ":inc": 1,
+            ":zero": 0,
+            ":default_total": 1,
+          },
+        }));
+      } catch (err) {
+        const error = err as { name?: string };
+        if (error?.name === 'ConditionalCheckFailedException') {
+          throw new Error('No credits remaining for this payment');
         }
-      }));
+        throw err;
+      }
     }
 
     // Save to generations table
@@ -98,28 +88,25 @@ export async function POST(req: NextRequest) {
       Item: generation
     }));
 
-    // Save to training data table for ML dataset (Non-blocking)
-    try {
-      await dynamo.send(new PutCommand({
-        TableName: TABLE_NAMES.TRAINING_DATA,
-        Item: {
-          id: generationId,
-          inputImageUrl: inputImageUrl || null,
-          maskUrl: maskImageUrl || null,
-          outputImageUrl,
-          prompt: promptUsed,
-          strength,
-          seed,
-          provider: provider || modelUsed,
-          absType,
-          feedback: null,
-          createdAt,
-        }
-      }));
-    } catch (trainingDataError) {
+    // Save to training data table for ML dataset (Fire-and-forget)
+    dynamo.send(new PutCommand({
+      TableName: TABLE_NAMES.TRAINING_DATA,
+      Item: {
+        id: generationId,
+        inputImageUrl: inputImageUrl || null,
+        maskUrl: maskImageUrl || null,
+        outputImageUrl,
+        prompt: promptUsed,
+        strength,
+        seed,
+        provider: provider || modelUsed,
+        absType,
+        feedback: null,
+        createdAt,
+      }
+    })).catch((trainingDataError) => {
       console.warn('Failed to save to training data table:', trainingDataError);
-      // Continue execution - do not fail the request
-    }
+    });
 
     return NextResponse.json({ success: true, generation });
   } catch (error: unknown) {

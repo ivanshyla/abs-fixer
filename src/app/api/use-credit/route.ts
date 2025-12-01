@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION || "eu-north-1" });
 const docClient = DynamoDBDocumentClient.from(client);
@@ -8,6 +8,26 @@ const docClient = DynamoDBDocumentClient.from(client);
 const TABLE_NAME = "abs-fixer-credits";
 const MAX_CREDITS = 6;
 const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
+
+const readUsageRecord = async (key: string, now: number) => {
+    const record = await docClient.send(
+        new GetCommand({
+            TableName: TABLE_NAME,
+            Key: { id: key },
+        })
+    );
+
+    const item = record.Item;
+    const lastReset = item?.lastReset ?? now;
+    const shouldReset = now - lastReset > RATE_LIMIT_WINDOW;
+    const creditsUsed = shouldReset ? 0 : item?.creditsUsed ?? 0;
+
+    return {
+        creditsUsed,
+        lastReset: shouldReset ? now : lastReset,
+        shouldReset,
+    };
+};
 
 export async function POST(req: NextRequest) {
     try {
@@ -22,75 +42,56 @@ export async function POST(req: NextRequest) {
         const fingerprintKey = `fp_${fingerprint}`;
         const ipKey = `ip_${ip}`;
 
-        // Update fingerprint record
-        await docClient.send(
-            new UpdateCommand({
-                TableName: TABLE_NAME,
-                Key: { id: fingerprintKey },
-                UpdateExpression: "SET creditsUsed = if_not_exists(creditsUsed, :zero) + :inc, lastUsed = :now",
-                ExpressionAttributeValues: {
-                    ":zero": 0,
-                    ":inc": 1,
-                    ":now": now,
-                },
-            })
-        );
+        const [fingerprintUsage, ipUsage] = await Promise.all([
+            readUsageRecord(fingerprintKey, now),
+            readUsageRecord(ipKey, now),
+        ]);
 
-        // Update IP record with reset logic
-        const ipRecord = await docClient.send(
-            new GetCommand({
-                TableName: TABLE_NAME,
-                Key: { id: ipKey },
-            })
-        );
+        if (fingerprintUsage.creditsUsed >= MAX_CREDITS) {
+            return NextResponse.json(
+                { allowed: false, reason: "fingerprint_limit" },
+                { status: 429 }
+            );
+        }
 
-        if (ipRecord.Item) {
-            const lastReset = ipRecord.Item.lastReset || 0;
-            const shouldReset = now - lastReset > RATE_LIMIT_WINDOW;
+        if (ipUsage.creditsUsed >= MAX_CREDITS) {
+            return NextResponse.json(
+                { allowed: false, reason: "ip_limit" },
+                { status: 429 }
+            );
+        }
 
-            if (shouldReset) {
-                // Reset counter
-                await docClient.send(
-                    new PutCommand({
-                        TableName: TABLE_NAME,
-                        Item: {
-                            id: ipKey,
-                            creditsUsed: 1,
-                            lastReset: now,
-                            lastUsed: now,
-                        },
-                    })
-                );
-            } else {
-                // Increment counter
-                await docClient.send(
-                    new UpdateCommand({
-                        TableName: TABLE_NAME,
-                        Key: { id: ipKey },
-                        UpdateExpression: "SET creditsUsed = creditsUsed + :inc, lastUsed = :now",
-                        ExpressionAttributeValues: {
-                            ":inc": 1,
-                            ":now": now,
-                        },
-                    })
-                );
-            }
-        } else {
-            // Create new IP record
-            await docClient.send(
+        const writes = [
+            docClient.send(
+                new PutCommand({
+                    TableName: TABLE_NAME,
+                    Item: {
+                        id: fingerprintKey,
+                        creditsUsed: fingerprintUsage.creditsUsed + 1,
+                        lastUsed: now,
+                        lastReset: fingerprintUsage.lastReset,
+                    },
+                })
+            ),
+            docClient.send(
                 new PutCommand({
                     TableName: TABLE_NAME,
                     Item: {
                         id: ipKey,
-                        creditsUsed: 1,
-                        lastReset: now,
+                        creditsUsed: ipUsage.creditsUsed + 1,
                         lastUsed: now,
+                        lastReset: ipUsage.lastReset,
                     },
                 })
-            );
-        }
+            ),
+        ];
 
-        return NextResponse.json({ success: true });
+        await Promise.all(writes);
+
+        return NextResponse.json({
+            allowed: true,
+            remaining: Math.max(0, MAX_CREDITS - (fingerprintUsage.creditsUsed + 1)),
+        });
     } catch (error) {
         console.error("Error using credit:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

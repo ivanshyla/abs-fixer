@@ -59,49 +59,35 @@ export const useCredits = () => {
         setLoading(false);
     }, []);
 
-    const checkCreditsOnServer = async (): Promise<boolean> => {
+    const useCredit = async (): Promise<boolean> => {
+        if (credits <= 0) {
+            return false;
+        }
+
         try {
-            const response = await fetch('/api/check-credits', {
+            const response = await fetch('/api/use-credit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ fingerprint }),
             });
             const data = await response.json();
-            return data.hasCredits;
-        } catch (error) {
-            console.error('Failed to check credits on server:', error);
-            // Fallback to localStorage if server check fails
-            return credits > 0;
-        }
-    };
 
-    const useCredit = async (): Promise<boolean> => {
-        // Check server-side credits first
-        const hasServerCredits = await checkCreditsOnServer();
-        if (!hasServerCredits) {
+            if (!response.ok || !data.allowed) {
+                if (data.reason === 'fingerprint_limit' || data.reason === 'ip_limit') {
+                    setCredits(0);
+                    localStorage.setItem(CREDITS_KEY, '0');
+                }
+                return false;
+            }
+        } catch (error) {
+            console.error('Failed to update server credits:', error);
             return false;
         }
 
-        // Decrement local credits
-        if (credits > 0) {
-            const newCredits = credits - 1;
-            setCredits(newCredits);
-            localStorage.setItem(CREDITS_KEY, newCredits.toString());
-
-            // Notify server
-            try {
-                await fetch('/api/use-credit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fingerprint }),
-                });
-            } catch (error) {
-                console.error('Failed to update server credits:', error);
-            }
-
-            return true;
-        }
-        return false;
+        const newCredits = credits - 1;
+        setCredits(newCredits);
+        localStorage.setItem(CREDITS_KEY, newCredits.toString());
+        return true;
     };
 
     const hasCredits = (): boolean => {
