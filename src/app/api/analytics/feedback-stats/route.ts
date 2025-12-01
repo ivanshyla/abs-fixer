@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
 import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 
-const ANALYTICS_API_KEY = process.env.ANALYTICS_API_KEY || 'dev_analytics_key_change_in_production';
+const ANALYTICS_API_KEY = process.env.ANALYTICS_API_KEY;
 
 export async function GET(req: NextRequest) {
     try {
+        if (!ANALYTICS_API_KEY) {
+            console.error('ANALYTICS_API_KEY not configured');
+            return NextResponse.json(
+                { error: 'Analytics endpoint not configured' },
+                { status: 503 }
+            );
+        }
+
         // Check API key
         const apiKey = req.headers.get('X-Analytics-Key');
         if (apiKey !== ANALYTICS_API_KEY) {

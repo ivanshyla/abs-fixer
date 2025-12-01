@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 interface PaymentFormProps {
-    onSuccess: () => Promise<void> | void;
+    onSuccess: (paymentIntentId: string) => Promise<void> | void;
     onError: (error: string) => void;
     loading: boolean;
 }
@@ -21,21 +21,45 @@ export default function PaymentForm({
 
         if (!stripe || !elements) return;
 
-        setProcessing(true);
+        try {
+            setProcessing(true);
 
-        const { error } = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-                return_url: `${window.location.origin}/`,
-            },
-            redirect: 'if_required',
-        });
+            const { error, paymentIntent } = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                    return_url: `${window.location.origin}/`,
+                },
+                redirect: 'if_required',
+            });
 
-        if (error) {
-            onError(error.message || 'Payment failed');
-            setProcessing(false);
-        } else {
-            await onSuccess();
+            if (error) {
+                onError(error.message || 'Payment failed');
+                setProcessing(false);
+                return;
+            }
+
+            if (!paymentIntent?.id) {
+                onError('Payment confirmation failed. Please try again.');
+                setProcessing(false);
+                return;
+            }
+
+            const confirmResponse = await fetch('/api/payments/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+            });
+
+            if (!confirmResponse.ok) {
+                const data = await confirmResponse.json();
+                throw new Error(data.error || 'Failed to confirm payment on server');
+            }
+
+            await onSuccess(paymentIntent.id);
+        } catch (err) {
+            console.error('Payment submit error:', err);
+            onError(err instanceof Error ? err.message : 'Payment failed');
+        } finally {
             setProcessing(false);
         }
     };
