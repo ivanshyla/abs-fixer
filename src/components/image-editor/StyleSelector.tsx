@@ -77,7 +77,6 @@ export default function StyleSelector({ selectedType, onSelect }: StyleSelectorP
 
             <section>
                 <CategoryHeader title="Weight Loss" subtitle="Sculpt & slim" />
-            <section>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
                     More transformation modes coming soon.
                 </div>
