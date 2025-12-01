@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPromptForAbsType, getNegativePrompt, getGenerationParams } from "@/lib/prompts";
+import { recordProviderUsage } from "@/lib/providerUsage";
 
 export async function POST(req: NextRequest) {
     try {
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
         const data = await response.json();
 
         if (data.image) {
+            await recordProviderUsage("getimg");
             return NextResponse.json({
                 image: `data:image/jpeg;base64,${data.image}`,
                 model_used: "GetImg.ai SDXL"

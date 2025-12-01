@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
 import { getPromptForAbsType, getNegativePrompt, getGenerationParams } from "@/lib/prompts";
+import { recordProviderUsage } from "@/lib/providerUsage";
 
 // Initialize Google Auth with explicit credentials
 const getGoogleAuth = () => {
@@ -138,6 +139,8 @@ export async function POST(req: NextRequest) {
         const outputBase64 = data.predictions[0].bytesBase64Encoded;
         const outputMimeType = data.predictions[0].mimeType || "image/png";
         const outputImageUrl = `data:${outputMimeType};base64,${outputBase64}`;
+
+        await recordProviderUsage("vertex");
 
         return NextResponse.json({
             image: outputImageUrl,

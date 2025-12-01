@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as fal from "@fal-ai/serverless-client";
 import { getPromptForAbsType, getGenerationParams } from "@/lib/prompts";
+import { recordProviderUsage } from "@/lib/providerUsage";
 
 // Configure the client with the API key
 fal.config({
@@ -98,6 +99,8 @@ export async function POST(req: NextRequest) {
     if (!outputImageUrl) {
       throw new Error("No image URL in response");
     }
+
+    await recordProviderUsage("fal");
 
     return NextResponse.json({
       image: outputImageUrl,
