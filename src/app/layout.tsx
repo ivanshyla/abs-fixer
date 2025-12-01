@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://absai.app"),
   title: "ABS.ai - Body Enhancer",
   description: "Transform your photos with AI-powered abdominal enhancements.",
   openGraph: {
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     siteName: "ABS.AI",
     images: [
       {
-        url: "https://absai.app/og-image.png?v=4",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
         alt: "ABS.AI - AI-Powered Body Enhancement",
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ABS.AI - Get 6-Pack Abs in Seconds",
     description: "Transform your photos instantly with AI. Natural, realistic abs tailored to your body.",
-    images: ["https://absai.app/og-image.png?v=4"],
+    images: ["/opengraph-image"],
   },
   icons: {
     icon: "/favicon-new.svg?v=4",
