@@ -6,16 +6,6 @@ export const TRANSFORMATION_CATEGORIES = {
         { id: 'natural_fit', label: 'Natural Fit', description: 'Subtle, natural definition' },
         { id: 'athletic', label: 'Athletic', description: 'Moderate muscle tone' },
         { id: 'defined', label: 'Defined', description: 'Clear six-pack visible' },
-    ],
-    weightLoss: [
-        { id: 'weight_loss_5', label: '-5 kg', description: 'Toned, slimmer look', badge: 'Beta' },
-        { id: 'weight_loss_10', label: '-10 kg', description: 'Significant change', badge: 'Beta' },
-        { id: 'ozempic', label: 'Ozempic Effect', description: 'Rapid weight loss look', badge: 'Beta' },
-    ],
-    training: [
-        { id: 'six_months_running', label: '6 Months Running', description: 'Endurance athlete vibe', badge: 'Beta' },
-        { id: 'six_months_climbing', label: '6 Months Climbing', description: 'Functional climber muscle', badge: 'Beta' },
-        { id: 'six_months_gym', label: '6 Months Gym', description: 'Balanced hypertrophy look', badge: 'Beta' },
     ]
 };
 
@@ -38,18 +28,16 @@ const TransformationCard = ({
     style,
     selected,
     onSelect,
-    className = "",
 }: {
-    style: { id: string; label: string; description: string; badge?: string };
+    style: { id: string; label: string; description: string };
     selected: boolean;
     onSelect: () => void;
-    className?: string;
 }) => (
     <button
         onClick={onSelect}
         className={`${cardBase} ${selected
             ? "bg-white/15 border-white/60 text-white shadow-lg"
-            : "bg-white/5 border-white/10 text-white/90 hover:bg-white/10"} ${className}`}
+            : "bg-white/5 border-white/10 text-white/90 hover:bg-white/10"}`}
     >
         <div className="flex items-start justify-between gap-3">
             <div>
@@ -89,31 +77,9 @@ export default function StyleSelector({ selectedType, onSelect }: StyleSelectorP
 
             <section>
                 <CategoryHeader title="Weight Loss" subtitle="Sculpt & slim" />
-                <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] snap-x snap-mandatory">
-                    {TRANSFORMATION_CATEGORIES.weightLoss.map((style) => (
-                        <TransformationCard
-                            key={style.id}
-                            style={style}
-                            selected={selectedType === style.id}
-                            onSelect={() => onSelect(style.id)}
-                            className="min-w-[220px] snap-start"
-                        />
-                    ))}
-                </div>
-            </section>
-
             <section>
-                <CategoryHeader title="Training Journeys" subtitle="6 month programs" />
-                <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] snap-x snap-mandatory">
-                    {TRANSFORMATION_CATEGORIES.training.map((style) => (
-                        <TransformationCard
-                            key={style.id}
-                            style={style}
-                            selected={selectedType === style.id}
-                            onSelect={() => onSelect(style.id)}
-                            className="min-w-[220px] snap-start"
-                        />
-                    ))}
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+                    More transformation modes coming soon.
                 </div>
             </section>
         </div>
