@@ -30,10 +30,11 @@ export default function LandingPage() {
                     <p className="text-xl text-brand-lighter mb-10 max-w-2xl mx-auto">
                         Transform your photos instantly. Natural, realistic results tailored to your body type. No gym required (yet).
                     </p>
-                    <Link href="/editor">
-                        <button className="px-10 py-5 bg-brand-medium text-white text-xl rounded-full font-bold hover:bg-brand-light transition-colors shadow-xl border border-brand-light/50">
-                            Start Transformation
-                        </button>
+                    <Link
+                        href="/editor"
+                        className="inline-flex px-10 py-5 bg-brand-medium text-white text-xl rounded-full font-bold hover:bg-brand-light transition-colors shadow-xl border border-brand-light/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-dark"
+                    >
+                        Start Transformation
                     </Link>
                     <p className="mt-4 text-sm text-brand-light">No subscription. Instant results.</p>
                 </div>
