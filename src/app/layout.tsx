@@ -18,12 +18,13 @@ export const metadata: Metadata = {
   description: "Transform your photos with AI-powered abdominal enhancements.",
   openGraph: {
     title: "ABS.AI - Get 6-Pack Abs in Seconds",
-    description: "Transform your photos instantly with AI. Natural, realistic abs tailored to your body. No gym required (yet).",
+    description:
+      "Transform your photos instantly with AI. Natural, realistic abs tailored to your body. No gym required (yet).",
     url: "https://absai.app",
     siteName: "ABS.AI",
     images: [
       {
-        url: "/opengraph-image",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "ABS.AI - AI-Powered Body Enhancement",
@@ -35,8 +36,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "ABS.AI - Get 6-Pack Abs in Seconds",
-    description: "Transform your photos instantly with AI. Natural, realistic abs tailored to your body.",
-    images: ["/opengraph-image"],
+    description:
+      "Transform your photos instantly with AI. Natural, realistic abs tailored to your body.",
+    images: ["/og-image.png"],
   },
   icons: {
     icon: "/favicon-new.svg?v=4",
