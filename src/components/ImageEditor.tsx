@@ -4,7 +4,6 @@ import React, { useRef, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import dynamic from "next/dynamic";
-import { useCredits } from "@/hooks/useCredits";
 
 // Import sub-components
 import UploadStep from "./image-editor/UploadStep";
@@ -32,18 +31,19 @@ export default function ImageEditor() {
   const [selectedAbsType, setSelectedAbsType] = useState<string>('natural_fit');
   const [userEmail, setUserEmail] = useState<string>('');
   const [intensity, setIntensity] = useState<number>(50); // 0-100 slider
-  const [provider, setProvider] = useState<'fal' | 'vertex' | 'getimg'>('fal');
+  const [provider] = useState<'fal' | 'vertex' | 'getimg'>('fal');
   const [showSaveWarning, setShowSaveWarning] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
 
-  // Use new credit system
-  const { credits, loading: creditsLoading, useCredit, hasCredits } = useCredits();
+  const [paymentAccessToken, setPaymentAccessToken] = useState<string | null>(null);
 
-  // Load payment ID from local storage
+  // Load persisted payment session
   React.useEffect(() => {
     const savedPaymentId = localStorage.getItem('abs_payment_id');
+    const savedPaymentToken = localStorage.getItem('abs_payment_token');
     if (savedPaymentId) setPaymentIntentId(savedPaymentId);
+    if (savedPaymentToken) setPaymentAccessToken(savedPaymentToken);
   }, []);
 
   // Payment
@@ -98,8 +98,13 @@ export default function ImageEditor() {
         throw new Error(data.error || 'Payment initialization failed');
       }
 
+      if (!data.paymentToken) {
+        throw new Error('Server did not return a payment token. Please try again.');
+      }
+
       setClientSecret(data.clientSecret);
       setPaymentIntentId(data.paymentIntentId);
+      setPaymentAccessToken(data.paymentToken);
       setStep('pay');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -123,6 +128,13 @@ export default function ImageEditor() {
       // Get dimensions
       const width = imageEl?.naturalWidth;
       const height = imageEl?.naturalHeight;
+
+      const effectivePaymentId = paymentIntentId ?? 'dev_bypass';
+      const isDevBypass = effectivePaymentId === 'dev_bypass';
+
+      if (!isDevBypass && !paymentAccessToken) {
+        throw new Error('Missing payment authorization. Please restart checkout.');
+      }
 
       // Choose API endpoint based on provider
       const apiEndpoint =
@@ -156,7 +168,6 @@ export default function ImageEditor() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: null,
           absType: styleToUse,
           outputImageUrl: data.image,
           modelUsed: data.model_used,
@@ -165,7 +176,8 @@ export default function ImageEditor() {
           // strength: ... // No longer available on client
           intensity, // Save intensity instead
           seed: data.seed,
-          paymentId: paymentIntentId || 'dev_bypass',
+          paymentId: effectivePaymentId,
+          paymentToken: isDevBypass ? undefined : paymentAccessToken,
         }),
       });
 
@@ -189,40 +201,27 @@ export default function ImageEditor() {
 
   // Generate after payment (First time)
   const handleGenerateAfterPayment = async () => {
-    if (paymentIntentId) localStorage.setItem('abs_payment_id', paymentIntentId);
+    if (paymentIntentId && !paymentAccessToken) {
+      setError('Missing payment authorization. Please restart checkout.');
+      return;
+    }
+
+    if (paymentIntentId) {
+      localStorage.setItem('abs_payment_id', paymentIntentId);
+    }
+    if (paymentIntentId && paymentAccessToken) {
+      localStorage.setItem('abs_payment_token', paymentAccessToken);
+    }
+
     await generateImage();
     setShowSaveWarning(true);
-  };
-
-  // Wrapper to handle credit deduction
-  const handleCreditGeneration = async () => {
-    if (hasCredits()) {
-      const success = await useCredit();
-      if (success) {
-        await generateImage();
-        setShowSaveWarning(true);
-      } else {
-        setError("Credit limit reached. Please try again later.");
-      }
-    } else {
-      handleProceedToPayment();
-    }
   };
 
   // Handle regeneration with new style
   const handleRegenerate = async (style: string) => {
     setSelectedAbsType(style);
-    if (hasCredits()) {
-      const success = await useCredit();
-      if (success) {
-        await generateImage(style);
-        setShowSaveWarning(true);
-      } else {
-        setError("Credit limit reached. Please try again later.");
-      }
-    } else {
-      setError("No credits remaining. Please refresh to pay again.");
-    }
+    await generateImage(style);
+    setShowSaveWarning(true);
   };
 
   // Rating
@@ -333,70 +332,55 @@ export default function ImageEditor() {
                 </div>
               )}
 
-              {credits > 0 ? (
-                <div className="mb-4">
-                  <div className="text-sm font-bold text-green-400 mb-2">
-                    Credits Remaining: {credits}
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-brand-medium to-brand-dark border border-brand-light rounded-xl p-5 shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="text-xs font-semibold text-brand-lighter uppercase tracking-wide mb-1">Pay to Generate</div>
+                      <div className="text-3xl font-bold text-white">$1.00</div>
+                    </div>
+                    <button
+                      onClick={() => setShowPricingModal(true)}
+                      className="w-8 h-8 rounded-full bg-brand-light text-white hover:bg-brand-lighter flex items-center justify-center font-bold shadow-md transition-all hover:scale-105"
+                      title="Why $1? See breakdown"
+                    >
+                      ?
+                    </button>
                   </div>
-                  <button
-                    onClick={handleCreditGeneration}
-                    disabled={loading || !maskImage}
-                    className="w-full py-3 rounded-lg font-bold bg-green-600 text-white hover:bg-green-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Generating...' : 'Generate Image (1 Credit)'}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-br from-brand-medium to-brand-dark border border-brand-light rounded-xl p-5 shadow-sm">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="text-xs font-semibold text-brand-lighter uppercase tracking-wide mb-1">Pay to Generate</div>
-                        <div className="text-3xl font-bold text-white">$1.00</div>
-                      </div>
-                      <button
-                        onClick={() => setShowPricingModal(true)}
-                        className="w-8 h-8 rounded-full bg-brand-light text-white hover:bg-brand-lighter flex items-center justify-center font-bold shadow-md transition-all hover:scale-105"
-                        title="Why $1? See breakdown"
-                      >
-                        ?
-                      </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center text-sm text-brand-lighter">
+                      <span className="text-green-400 mr-2">✓</span>
+                      <span><strong>6 secured credits</strong> = 6 AI generations</span>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm text-brand-lighter">
-                        <span className="text-green-400 mr-2">✓</span>
-                        <span><strong>6 credits</strong> = 6 AI generations</span>
-                      </div>
-                      <div className="flex items-center text-sm text-brand-lighter">
-                        <span className="text-green-400 mr-2">✓</span>
-                        <span>No subscription, no hidden fees</span>
-                      </div>
-                      <div className="flex items-center text-sm text-brand-lighter">
-                        <span className="text-green-400 mr-2">✓</span>
-                        <span>Try all 3 AI providers</span>
-                      </div>
+                    <div className="flex items-center text-sm text-brand-lighter">
+                      <span className="text-green-400 mr-2">✓</span>
+                      <span>No subscription, no hidden fees</span>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-brand-light">
-                      <button
-                        onClick={() => setShowPricingModal(true)}
-                        className="text-xs text-brand-lighter hover:text-white font-medium underline"
-                      >
-                        See full cost breakdown →
-                      </button>
+                    <div className="flex items-center text-sm text-brand-lighter">
+                      <span className="text-green-400 mr-2">✓</span>
+                      <span>Try all 3 AI providers</span>
                     </div>
                   </div>
-                  <button
-                    onClick={handleProceedToPayment}
-                    disabled={loading || !maskImage || !userEmail}
-                    className={`w-full py-3 rounded-lg font-bold transition-all ${maskImage && userEmail
-                      ? 'bg-brand-lighter text-brand-darkest hover:bg-white shadow-md'
-                      : 'bg-brand-medium text-brand-light cursor-not-allowed'
-                      }`}
-                  >
-                    Proceed to Payment ($1.00)
-                  </button>
+                  <div className="mt-3 pt-3 border-t border-brand-light">
+                    <button
+                      onClick={() => setShowPricingModal(true)}
+                      className="text-xs text-brand-lighter hover:text-white font-medium underline"
+                    >
+                      See full cost breakdown →
+                    </button>
+                  </div>
                 </div>
-              )}
+                <button
+                  onClick={handleProceedToPayment}
+                  disabled={loading || !maskImage || !userEmail}
+                  className={`w-full py-3 rounded-lg font-bold transition-all ${maskImage && userEmail
+                    ? 'bg-brand-lighter text-brand-darkest hover:bg-white shadow-md'
+                    : 'bg-brand-medium text-brand-light cursor-not-allowed'
+                    }`}
+                >
+                  Proceed to Payment ($1.00)
+                </button>
+              </div>
 
               {/* Step Hint */}
               {(!maskImage || !userEmail) && (
@@ -518,7 +502,7 @@ export default function ImageEditor() {
             </div>
             <div className="p-6">
               <p className="text-brand-lighter mb-4">
-                We believe in transparent pricing. Here's exactly where your dollar goes:
+                We believe in transparent pricing. Here&apos;s exactly where your dollar goes:
               </p>
               <div className="space-y-3 mb-6 text-brand-lightest">
                 <div className="flex justify-between items-center">

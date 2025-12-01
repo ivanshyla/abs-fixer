@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { dynamo, TABLE_NAMES } from '@/lib/aws';
 import { PutCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from 'uuid';
 import { getPromptForAbsType } from '@/lib/prompts';
 
+const hashPaymentToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
+
 export async function POST(req: NextRequest) {
   try {
     const {
-      userId,
       absType,
       gender,
       inputImageUrl,
@@ -17,11 +19,61 @@ export async function POST(req: NextRequest) {
       // promptUsed, // Client no longer sends this
       strength,
       seed,
-      paymentId,
+      paymentId: rawPaymentId,
       provider,
       intensity, // Client sends intensity now
+      paymentToken,
     } = await req.json();
 
+    const paymentId = rawPaymentId ?? null;
+    const bypassPaymentChecks = !paymentId || paymentId === 'dev_bypass';
+
+    let paymentOwnerId = 'anonymous';
+    let paymentRecord: Record<string, unknown> | null = null;
+
+    if (!bypassPaymentChecks) {
+      if (!paymentToken) {
+        throw new Error('Missing payment token. Please restart checkout.');
+      }
+
+      const paymentResponse = await dynamo.send(new GetCommand({
+        TableName: TABLE_NAMES.PAYMENTS,
+        Key: { id: paymentId }
+      }));
+
+      paymentRecord = paymentResponse.Item || null;
+
+      if (!paymentRecord) {
+        throw new Error('Payment record not found');
+      }
+
+      const storedHash = paymentRecord.payment_access_token_hash as string | undefined;
+      const expiresAt = paymentRecord.payment_access_token_expires_at as string | undefined;
+
+      if (!storedHash || !expiresAt) {
+        throw new Error('Payment session is not authorized. Please start over.');
+      }
+
+      const providedHash = hashPaymentToken(paymentToken);
+      const storedHashBuffer = Buffer.from(storedHash, 'hex');
+      const providedHashBuffer = Buffer.from(providedHash, 'hex');
+
+      if (storedHashBuffer.length !== providedHashBuffer.length || !crypto.timingSafeEqual(storedHashBuffer, providedHashBuffer)) {
+        throw new Error('Invalid payment token');
+      }
+
+      if (new Date(expiresAt).getTime() < Date.now()) {
+        throw new Error('Payment session expired. Please restart checkout.');
+      }
+
+      const paymentStatus = paymentRecord.stripe_payment_status as string | undefined;
+
+      if (paymentStatus !== 'succeeded') {
+        throw new Error('Payment has not completed yet. Please wait for confirmation.');
+      }
+
+      paymentOwnerId = (paymentRecord.user_id as string | undefined) || 'anonymous';
+    }
     const generationId = uuidv4();
     const createdAt = new Date().toISOString();
 
@@ -39,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     const generation = {
       id: generationId,
-      user_id: userId || 'anonymous',
+      user_id: paymentOwnerId,
       abs_type: absType,
       gender: gender || null,
       input_image_url: inputImageUrl || null,
@@ -49,7 +101,7 @@ export async function POST(req: NextRequest) {
       prompt_used: promptUsed,
       strength: strength || null,
       seed: seed || null,
-      payment_id: paymentId || null,
+      payment_id: bypassPaymentChecks ? null : paymentId,
       user_rating: 0,
       created_at: createdAt,
       // New feedback fields
@@ -60,27 +112,14 @@ export async function POST(req: NextRequest) {
     };
 
     // Credit Deduction Logic
-    if (paymentId && paymentId !== 'dev_bypass') {
-      // 1. Check credits
-      const paymentResponse = await dynamo.send(new GetCommand({
-        TableName: TABLE_NAMES.PAYMENTS,
-        Key: { id: paymentId }
-      }));
-
-      const payment = paymentResponse.Item;
-
-      if (!payment) {
-        throw new Error('Payment record not found');
-      }
-
-      const creditsTotal = payment.credits_total || 1; // Default to 1 if not set (legacy)
-      const creditsUsed = payment.credits_used || 0;
+    if (!bypassPaymentChecks && paymentRecord) {
+      const creditsTotal = (paymentRecord.credits_total as number | undefined) || 1; // Default to 1 if not set (legacy)
+      const creditsUsed = (paymentRecord.credits_used as number | undefined) || 0;
 
       if (creditsUsed >= creditsTotal) {
         throw new Error('No credits remaining for this payment');
       }
 
-      // 2. Increment credits used
       await dynamo.send(new UpdateCommand({
         TableName: TABLE_NAMES.PAYMENTS,
         Key: { id: paymentId },

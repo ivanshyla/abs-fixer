@@ -1,5 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 const ImageEditor = dynamic(() => import("../../components/ImageEditor"), {
   ssr: false,
@@ -17,9 +18,9 @@ export default function Home() {
       <header className="border-b border-brand-medium bg-brand-darkest/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <a href="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
               <span className="text-2xl font-semibold text-white tracking-tight" style={{ fontFamily: '"Gill Sans", "Gill Sans MT", Calibri, sans-serif' }}>ABS.AI</span>
-            </a>
+            </Link>
             <div className="text-sm text-brand-light">AI-Powered Enhancement</div>
           </div>
         </div>
